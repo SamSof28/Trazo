@@ -1,8 +1,9 @@
 # Backend — mapa de implementación y conexión
 
-> **Estado:** Fase 0 completa y backend de Fase 1 completo. El frontend (rebanada 1.4) y los módulos de
-> catálogo, intake, generación, edición y publicación todavía no existen. Este documento describe lo que
-> **ya está implementado** y el patrón exacto para agregar lo que sigue.
+> **Estado:** Fase 0, backend de Fase 1 y backend de Fase 2 (catálogo) completos. El frontend
+> (rebanadas 1.4 y 2.4) y los módulos de intake, generación, edición y publicación todavía no
+> existen. Este documento describe lo que **ya está implementado** y el patrón exacto para agregar lo
+> que sigue.
 
 Documentos relacionados: [`API.md`](API.md) (contrato REST), [`ARCHITECTURE.md`](ARCHITECTURE.md)
 (capas y seguridad), [`DOMAIN.md`](DOMAIN.md) (modelo de datos), [`AI.md`](AI.md) (Gemini y grounding).
@@ -77,12 +78,20 @@ backend/
   prisma/
     schema.prisma                 # modelo completo del dominio
     migrations/0001_init/         # migración inicial + CHECK constraints
-    seed.ts                       # usuario ADMIN idempotente
+    migrations/0002_catalog_search/ # pg_trgm + índices GIN del catálogo
+    seed.ts                       # admin + catálogo de Colombia idempotente
   src/
     domain/
       identity/
         user.ts                   # entidad User + normalización + toPublic()
         ports.ts                  # UserRepository, PasswordHasher, tokens, Clock
+      catalog/
+        destination.ts            # entidad + validación de slug, coordenadas y tags
+        hotel.ts                  # entidad + categoría 1..5 y precio por noche
+        activity.ts               # entidad + intensidad, duración y tags
+        transport-option.ts       # entidad + pricing_unit compatible con mode
+        values.ts                 # normalización y validaciones compartidas
+        ports.ts                  # repositorios y criterios de búsqueda
       shared/
         app-error.ts              # errores de dominio → HTTP
     application/
@@ -93,11 +102,20 @@ backend/
         create-user.use-case.ts
         get-me.use-case.ts
         dto.ts
+      catalog/
+        *-use-case.ts             # list/get/create/update/deactivate por entidad
+        presenters.ts             # entidad → DTO compartido
+        assert-destination.ts     # destino activo para hoteles/actividades/transporte
     infrastructure/
       persistence/prisma/
         client.ts
+        catalog-mappers.ts        # BigInt/Decimal/JSON → tipos seguros
         user.repository.ts
         refresh-token.repository.ts
+        destination.repository.ts
+        hotel.repository.ts
+        activity.repository.ts
+        transport-option.repository.ts
       security/
         argon2-password-hasher.ts
         jwt-access-token.service.ts
@@ -107,10 +125,14 @@ backend/
       routes.ts                   # router /api/v1
       auth.controller.ts
       user.controller.ts
+      destination.controller.ts
+      hotel.controller.ts
+      activity.controller.ts
+      transport.controller.ts
       cookies.ts                  # cookie HttpOnly del refresh
       middleware/
         auth.ts                   # requireAuth + requireRole
-        validate.ts               # Zod en el borde
+        validate.ts               # validateBody/Query/Params con Zod
         error-handler.ts          # application/problem+json
       rate-limit.ts
     config/
@@ -120,11 +142,14 @@ backend/
     app.ts                        # helmet, CORS, JSON 100kb, health, errores
     server.ts                     # listen + graceful shutdown
   test/
-    fakes.ts                      # puertos en memoria, sin DB ni red
+    fakes.ts                      # puertos de identidad en memoria
+    catalog-fakes.ts              # repositorios de catálogo en memoria
     user.test.ts
     login.use-case.test.ts
     refresh.use-case.test.ts
-    auth.http.test.ts             # Supertest con fakes
+    catalog.domain.test.ts        # invariantes del catálogo
+    catalog.http.test.ts          # Supertest: lecturas, RBAC y CRUD
+    auth.http.test.ts
     test-app.ts
 ```
 
@@ -154,7 +179,7 @@ request
   → rate-limit global
   → requireAuth (si aplica)
   → requireRole (si aplica)
-  → validateBody (Zod)
+  → validateBody / validateQuery / validateParams (Zod)
   → controller
   → use case
   → repository / puerto
@@ -175,12 +200,29 @@ Router montado en `/api/v1` (`backend/src/interfaces/http/routes.ts`).
 | `POST` | `/auth/logout` | cookie `refresh_token` | `AuthController.logout` | `LogoutUseCase` | ✅ |
 | `GET` | `/auth/me` | `Bearer` | `AuthController.me` | `GetMeUseCase` | ✅ |
 | `POST` | `/users` | `Bearer` + `ADMIN` | `UserController.create` | `CreateUserUseCase` | ✅ |
+| `GET` | `/catalog/destinations` | `Bearer` | `DestinationController.list` | `ListDestinationsUseCase` | ✅ |
+| `GET` | `/catalog/destinations/:id` | `Bearer` | `DestinationController.get` | `GetDestinationUseCase` | ✅ |
+| `POST` | `/catalog/destinations` | `Bearer` + `ADMIN` | `DestinationController.create` | `CreateDestinationUseCase` | ✅ |
+| `PATCH` | `/catalog/destinations/:id` | `Bearer` + `ADMIN` | `DestinationController.update` | `UpdateDestinationUseCase` | ✅ |
+| `DELETE` | `/catalog/destinations/:id` | `Bearer` + `ADMIN` | `DestinationController.remove` | `DeactivateDestinationUseCase` | ✅ |
+| `GET` | `/catalog/hotels` | `Bearer` | `HotelController.list` | `ListHotelsUseCase` | ✅ |
+| `POST` | `/catalog/hotels` | `Bearer` + `ADMIN` | `HotelController.create` | `CreateHotelUseCase` | ✅ |
+| `PATCH` | `/catalog/hotels/:id` | `Bearer` + `ADMIN` | `HotelController.update` | `UpdateHotelUseCase` | ✅ |
+| `DELETE` | `/catalog/hotels/:id` | `Bearer` + `ADMIN` | `HotelController.remove` | `DeactivateHotelUseCase` | ✅ |
+| `GET` | `/catalog/activities` | `Bearer` | `ActivityController.list` | `ListActivitiesUseCase` | ✅ |
+| `POST` | `/catalog/activities` | `Bearer` + `ADMIN` | `ActivityController.create` | `CreateActivityUseCase` | ✅ |
+| `PATCH` | `/catalog/activities/:id` | `Bearer` + `ADMIN` | `ActivityController.update` | `UpdateActivityUseCase` | ✅ |
+| `DELETE` | `/catalog/activities/:id` | `Bearer` + `ADMIN` | `ActivityController.remove` | `DeactivateActivityUseCase` | ✅ |
+| `GET` | `/catalog/transport` | `Bearer` | `TransportController.list` | `ListTransportOptionsUseCase` | ✅ |
+| `POST` | `/catalog/transport` | `Bearer` + `ADMIN` | `TransportController.create` | `CreateTransportOptionUseCase` | ✅ |
+| `PATCH` | `/catalog/transport/:id` | `Bearer` + `ADMIN` | `TransportController.update` | `UpdateTransportOptionUseCase` | ✅ |
+| `DELETE` | `/catalog/transport/:id` | `Bearer` + `ADMIN` | `TransportController.remove` | `DeactivateTransportOptionUseCase` | ✅ |
 | `GET` | `/health` | público | — | — | ✅ |
 | `GET` | `/health/ready` | público | — | — | ✅ |
-| `PATCH` | `/users/:id` | `ADMIN` | — | — | ⏳ Fase 2+ |
+| `PATCH` | `/users/:id` | `ADMIN` | — | — | ⏳ pendiente |
 
-Los endpoints de catálogo, `trip-requests` y `plans` están especificados en [`API.md`](API.md), pero
-**aún no están implementados**. No los consumas todavía.
+Los endpoints de `trip-requests` y `plans` están especificados en [`API.md`](API.md), pero **aún no
+están implementados**. No los consumas todavía.
 
 ### 4.1 `POST /api/v1/auth/login`
 
@@ -288,6 +330,50 @@ Content-Type: application/json
 - No hay registro público: solo un `ADMIN` crea usuarios.
 - `role` por defecto es `ADVISOR`; `password` mínimo 12 caracteres.
 - Email duplicado: `409 CONFLICT`.
+
+### 4.6 Catálogo (lectura y administración)
+
+El contrato completo está en [`API.md` §3](API.md#3-catálogo-implementado--fase-2). Resumen:
+
+```http
+GET /api/v1/catalog/destinations?featured=true&pageSize=10
+Authorization: Bearer <accessToken>
+```
+
+```json
+{
+  "items": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "city": "Cartagena",
+      "country": "Colombia",
+      "slug": "cartagena",
+      "latitude": 10.391049,
+      "longitude": -75.479426,
+      "tags": ["playa", "historia"],
+      "isFeatured": true,
+      "fromPrice": { "amountMinor": 52000000, "currency": "COP" }
+    }
+  ],
+  "page": 1,
+  "pageSize": 10,
+  "total": 1
+}
+```
+
+Filtros disponibles:
+
+| Recurso | Query params |
+|---|---|
+| Destinos | `q`, `country`, `featured`, `page`, `pageSize` |
+| Hoteles | `destinationId`, `maxPriceMinor`, `currency`, `page`, `pageSize` |
+| Actividades | `destinationId`, `interest`, `intensity`, `page`, `pageSize` |
+| Transporte | `originId`, `destinationId`, `mode`, `page`, `pageSize` |
+
+Escritura (solo `ADMIN`): `POST`/`PATCH`/`DELETE` en `/catalog/destinations`, `/catalog/hotels`,
+`/catalog/activities` y `/catalog/transport`. Los precios se envían como
+`{ "amountMinor": 48000000, "currency": "COP" }`; `DELETE` desactiva (`isActive=false`) y responde
+`204`. Los bodies desconocidos se rechazan con `422` y los IDs inexistentes con `404`.
 
 ---
 
@@ -399,6 +485,42 @@ export async function logout(): Promise<void> {
 > puede ir en el `queryFn` global o en un interceptor; lo importante es no duplicar refresh
 > concurrentes y no persistir el access token.
 
+### 5.1 Consumo del catálogo
+
+El catálogo se consume con el mismo `apiFetch` (Bearer + refresh silencioso). Ejemplo para el
+carrusel y los pines del mapa:
+
+```ts
+// frontend/src/features/catalog/api.ts
+import type { DestinationDto, Paginated } from '@turiviaje/shared';
+import { apiFetch } from '../../shared/api/client';
+
+export async function fetchFeaturedDestinations(): Promise<Paginated<DestinationDto>> {
+  const response = await apiFetch(
+    '/api/v1/catalog/destinations?featured=true&pageSize=10',
+  );
+  if (!response.ok) throw await response.json();
+  return (await response.json()) as Paginated<DestinationDto>;
+}
+
+export async function fetchDestinations(query: string): Promise<Paginated<DestinationDto>> {
+  const params = new URLSearchParams({ q: query, page: '1', pageSize: '20' });
+  const response = await apiFetch(`/api/v1/catalog/destinations?${params}`);
+  if (!response.ok) throw await response.json();
+  return (await response.json()) as Paginated<DestinationDto>;
+}
+```
+
+- Usa TanStack Query con claves estables, por ejemplo `['catalog', 'destinations', { q, featured }]`,
+  y `staleTime` de 5–10 minutos: el catálogo cambia poco.
+- `fromPrice` es `Money | null`; si es `null`, el pin muestra solo el nombre. No calcules precios en
+  el cliente.
+- Para el detalle: `GET /catalog/destinations/:id` → `{ destination }`.
+- Para hoteles/actividades/transporte usa `destinationId` y los filtros documentados en
+  [`API.md` §3](API.md#3-catálogo-implementado--fase-2).
+- Las pantallas de administración deben ocultarse para `ADVISOR`; la API igual responde `403`.
+- No guardes respuestas del catálogo en `localStorage`; TanStack Query es la caché.
+
 ### Códigos que debe manejar el frontend
 
 | HTTP | `code` | Acción |
@@ -444,8 +566,8 @@ Todos los errores usan `application/problem+json`:
 |---|---|---|
 | `GET /auth/me` | propio | propio |
 | `POST /users` | ❌ `403` | ✅ |
-| Catálogo (lectura, futuro) | ✅ | ✅ |
-| Catálogo (escritura, futuro) | ❌ | ✅ |
+| Catálogo (lectura) | ✅ | ✅ |
+| Catálogo (escritura) | ❌ `403` | ✅ |
 | `trip-requests` propias (futuro) | CRUD | CRUD |
 | `trip-requests` ajenas (futuro) | ❌ `404` | ✅ |
 | `plans` propios (futuro) | CRUD + publicar | CRUD + publicar |
@@ -501,8 +623,9 @@ router.get(
 );
 ```
 
-> `validateQuery` y `validateParams` aún no existen; se agregan en la Fase 2 junto con el primer
-> endpoint que los necesite. No los crees vacíos antes.
+> `validateQuery` y `validateParams` ya existen. Escriben en `req.validatedQuery` y
+> `req.validatedParams` (no en `req.query`, que en Express 5 es de solo lectura). En el controller
+> castea el resultado al tipo inferido del esquema compartido.
 
 ---
 
@@ -518,11 +641,12 @@ npm run typecheck
 npm run build
 ```
 
-Estado actual: **22 tests de backend + 6 de `packages/shared`**, sin base de datos ni red (fakes).
-Los tests HTTP usan Supertest contra la app real con repositorios en memoria.
+Estado actual: **47 tests de backend + 6 de `packages/shared`**, sin base de datos ni red (fakes).
+Los tests HTTP usan Supertest contra la app real con repositorios en memoria. El catálogo añade
+`catalog.domain.test.ts` (invariantes) y `catalog.http.test.ts` (lecturas, filtros, RBAC y CRUD).
 
-Los tests de integración contra Postgres llegarán con el primer módulo que lo requiera (Fase 2). El
-patrón será limpiar por transacción o truncado, nunca compartir estado entre tests.
+Los tests de integración contra Postgres siguen pendientes de credenciales reales. El patrón será
+limpiar por transacción o truncado, nunca compartir estado entre tests.
 
 ---
 
@@ -531,12 +655,13 @@ patrón será limpiar por transacción o truncado, nunca compartir estado entre 
 | Elemento | Estado |
 |---|---|
 | Scaffold, env, logger, errores, health | ✅ |
-| Prisma schema + migración `0001_init` | ✅ (generada, **no aplicada** sin credenciales) |
-| Seed de admin | ✅ (código listo, **no ejecutado** sin credenciales) |
+| Prisma schema + migraciones `0001_init` y `0002_catalog_search` | ✅ (generadas, **no aplicadas** sin credenciales) |
+| Seed de admin + catálogo de Colombia | ✅ (código listo, **no ejecutado** sin credenciales) |
 | Login, refresh rotativo, logout, `/auth/me` | ✅ |
 | RBAC `ADMIN` + `POST /users` | ✅ |
+| Catálogo backend: destinos, hoteles, actividades y transporte | ✅ (lectura + CRUD `ADMIN`, soft delete) |
 | Frontend `/login`, guard, refresh silencioso | ⏳ Fase 1.4 |
-| Catálogo | ⏳ Fase 2 |
+| Frontend del catálogo (selector de destino) | ⏳ Fase 2.4 |
 | Intake conversacional | ⏳ Fase 3 |
 | Gemini + generación | ⏳ Fase 4 (ver [`AI.md`](AI.md)) |
 

@@ -4,7 +4,8 @@ Entrega **incremental por rebanadas verticales**. Una fase no empieza hasta que 
 definición de terminado (DoD). Cada rebanada incluye dominio + caso de uso + adaptador + ruta + tests +
 docs. No se hace `git commit` sin autorización del usuario.
 
-**Fase actual: 2 — Catálogo. Fase 0 y backend de Fase 1 completos; 1.4 (frontend) pendiente.**
+**Fase actual: 2 — Catálogo. Fase 0, backend de Fase 1 y backend de Fase 2 completos; 1.4 y 2.4
+(frontend) pendientes.**
 
 ## DoD común
 
@@ -41,15 +42,16 @@ familia; tests de 401/403/429. Backend cumplido (22 tests + 6 de shared); falta 
 
 ## Fase 2 — Catálogo
 
-| Rebanada | Entrega |
-|---|---|
-| 2.1 | `Destination` CRUD (ADMIN) + `GET /catalog/destinations` con búsqueda trigram |
-| 2.2 | `Hotel` + `Activity` + `TransportOption` con precios en unidades menores y `pricing_unit` |
-| 2.3 | Seed de Colombia: Cartagena, Eje Cafetero, Medellín, San Andrés, Santa Marta (≥ 8 hoteles, ≥ 20 actividades) |
-| 2.4 | Frontend: selector de destino con chips y tarjetas |
+| Rebanada | Entrega | Estado |
+|---|---|---|
+| 2.1 | `Destination` CRUD (ADMIN) + `GET /catalog/destinations` con búsqueda trigram | ✅ |
+| 2.2 | `Hotel` + `Activity` + `TransportOption` con precios en unidades menores y `pricing_unit` | ✅ |
+| 2.3 | Seed de Colombia: Cartagena, Eje Cafetero, Medellín, San Andrés, Santa Marta (≥ 8 hoteles, ≥ 20 actividades) | ✅ código; ⏳ ejecutar con credenciales reales |
+| 2.4 | Frontend: selector de destino con chips y tarjetas | ⏳ |
 
 **DoD:** precios y monedas consistentes; índices creados; `GET` paginado y filtrable; sin escritura
-para `ADVISOR`.
+para `ADVISOR`. Backend cumplido (47 tests + 6 de shared, migración `0002_catalog_search` generada);
+falta la rebanada 2.4 y aplicar migraciones/seed cuando el equipo configure Supabase.
 
 ## Fase 3 — Intake conversacional (sin IA generativa)
 

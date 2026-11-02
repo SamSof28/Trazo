@@ -53,8 +53,10 @@ Convenciones: `id uuid` (generado por `gen_random_uuid()`), `created_at/updated_
 **destinations**: `id`, `city`, `country`, `slug` UNIQUE, `description`, `hero_image_url`,
 `latitude numeric(9,6)`, `longitude numeric(9,6)`, `timezone` (default `America/Bogota`),
 `tags text[]` (p. ej. `ciudad-amurallada`, `vida-nocturna`), `is_featured` (default false), `is_active`.
-Índice `(country, is_active)`, búsqueda por `city` con `pg_trgm`. `fromPriceMinor` **no se almacena**:
-se deriva con `MIN(price_per_night_minor)` de los hoteles activos y se usa en los pines del mapa.
+`slug` cumple `^[a-z0-9]+(?:-[a-z0-9]+)*$` y se deriva de `city` (sin tildes) cuando el `ADMIN` no lo
+envía. Índice `(country, is_active)`, búsqueda por `city`/`slug` con `pg_trgm`. `fromPrice` **no se
+almacena**: se deriva con `MIN(price_per_night_minor)` de los hoteles activos **en COP** y se usa en
+los pines del mapa. Si no hay hoteles activos en COP, es `null`.
 
 **hotels**: `id`, `destination_id` FK, `name`, `description`, `category smallint` (1–5),
 `room_type`, `price_per_night_minor`, `currency`, `image_url`, `amenities jsonb`, `is_active`.
@@ -67,7 +69,15 @@ se deriva con `MIN(price_per_night_minor)` de los hoteles activos y se usa en lo
 **transport_options**: `id`, `origin_destination_id` (nullable, FK), `destination_id` FK,
 `mode enum(FLIGHT|BUS|CAR_RENTAL|BOAT|TRAIN)`, `provider`, `price_minor`, `currency`,
 `pricing_unit enum(PER_PERSON|PER_NIGHT|PER_DAY|PER_TRIP)`, `duration_minutes`, `is_active`.
-`CAR_RENTAL` usa `PER_DAY`; `FLIGHT` usa `PER_TRIP` o `PER_PERSON` según tarifa.
+Reglas de `pricing_unit`: `CAR_RENTAL` exige `PER_DAY`; `FLIGHT` admite `PER_TRIP` o `PER_PERSON`;
+`BUS`, `BOAT` y `TRAIN` admiten `PER_PERSON` o `PER_TRIP`; `PER_NIGHT` no aplica a transporte.
+`origin_destination_id` no puede ser igual a `destination_id`.
+
+El catálogo usa **soft delete**: `DELETE /catalog/...` pone `is_active=false`; las filas se conservan
+para no romper los `plan_items` que las referencian. Las lecturas solo devuelven ítems activos de
+destinos activos. La migración `0002_catalog_search` crea `pg_trgm`, los índices GIN de búsqueda y el
+índice de rutas de transporte.
+
 
 ### planning
 
@@ -167,6 +177,10 @@ erDiagram
 | INV-10 | `TripRequest.READY` exige destino, fechas/duración, viajeros y presupuesto; intereses son opcionales. |
 | INV-11 | No se puede generar dos veces sobre la misma solicitud sin cerrar el job anterior (`409`). |
 | INV-12 | `day_number` es consecutivo desde 1 y su `date` respeta `start_date`. |
+| INV-13 | Los precios de catálogo son enteros no negativos en unidades menores + moneda ISO-4217; latitud/longitud están en rango. |
+| INV-14 | `fromPrice` es derivado (hotel activo más económico en COP); nunca se persiste. |
+| INV-15 | `transport_options.pricing_unit` es compatible con `mode`; origen y destino son distintos. |
+| INV-16 | Desactivar catálogo es soft delete; nunca se borran filas referenciadas por `plan_items`. |
 
 ## 5. Cálculo de presupuesto
 

@@ -1,8 +1,8 @@
 # AGENTS.md
 
 Instrucciones para sesiones de OpenCode en **TuriViajes** (Módulo 1: diseñador inteligente de planes
-turísticos). El repositorio ya tiene el monorepo, el backend de Fase 0 y el backend de Fase 1
-(identidad) implementados y con tests. El frontend y los módulos de catálogo/planificación aún no
+turísticos). El repositorio ya tiene el monorepo y los backends de Fase 0, Fase 1 (identidad) y Fase 2
+(catálogo) implementados y con tests. El frontend y los módulos de intake/planificación aún no
 existen.
 
 ## Contexto de producto
@@ -13,7 +13,7 @@ el proceso manual en hojas de cálculo y correos. UX tipo Layla.ai: super prompt
 solo lo que falta → split-view con mapa, carrusel y timeline.
 
 Problema, objetivo, alcance, HUs y diagramas: [`README.md`](README.md) §1–§8. Fase actual: **2 —
-Catálogo**; la Fase 1 quedó completa en backend y la 1.4 (frontend) está pendiente
+Catálogo**; 2.1–2.3 completos en backend y la 2.4 (frontend) está pendiente, al igual que la 1.4
 ([`docs/ROADMAP.md`](docs/ROADMAP.md)).
 
 ## Leer antes de codificar
@@ -66,12 +66,14 @@ npm run db:seed -w backend
 ## Estado actual del backend
 
 - **Implementado:** scaffold del monorepo, `config/env.ts` con Zod, logger pino con redacción,
-  `errorHandler` problem+json, `/health`, `/health/ready`, Prisma schema completo + migración
-  `0001_init` generada, seed de admin, login, refresh rotativo con detección de reuso, logout,
-  `/auth/me`, RBAC y `POST /users` (solo `ADMIN`).
-- **Tests:** 22 de backend + 6 de `packages/shared`, con fakes (sin DB ni red).
-- **Pendiente inmediato:** aplicar la migración y el seed cuando existan credenciales reales de
-  Supabase; el frontend de la rebanada 1.4; después, Fase 2 (catálogo).
+  `errorHandler` problem+json, `/health`, `/health/ready`, Prisma schema completo + migraciones
+  `0001_init` y `0002_catalog_search` generadas, seed de admin y catálogo de Colombia, login, refresh
+  rotativo con detección de reuso, logout, `/auth/me`, RBAC, `POST /users` (solo `ADMIN`) y catálogo
+  completo (`destinations`, `hotels`, `activities`, `transport`) con lectura autenticada, escritura
+  `ADMIN` y soft delete.
+- **Tests:** 47 de backend + 6 de `packages/shared`, con fakes (sin DB ni red).
+- **Pendiente inmediato:** aplicar las migraciones y el seed cuando existan credenciales reales de
+  Supabase; el frontend de las rebanadas 1.4 y 2.4; después, Fase 3 (intake conversacional).
 - **Contrato de conexión:** [`docs/BACKEND.md`](docs/BACKEND.md). **IA:** [`docs/AI.md`](docs/AI.md).
 
 ## Estructura y regla de dependencia

@@ -12,3 +12,27 @@ export function validateBody(schema: ZodTypeAny): RequestHandler {
     next();
   };
 }
+
+export function validateQuery(schema: ZodTypeAny): RequestHandler {
+  return (req, _res, next) => {
+    const result = schema.safeParse(req.query);
+    if (!result.success) {
+      next(result.error);
+      return;
+    }
+    req.validatedQuery = result.data;
+    next();
+  };
+}
+
+export function validateParams(schema: ZodTypeAny): RequestHandler {
+  return (req, _res, next) => {
+    const result = schema.safeParse(req.params);
+    if (!result.success) {
+      next(result.error);
+      return;
+    }
+    req.validatedParams = result.data;
+    next();
+  };
+}

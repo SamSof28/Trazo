@@ -3,9 +3,9 @@
 Base: `/api/v1`. JSON UTF-8. Autenticación `Authorization: Bearer <accessToken>` salvo donde se indique.
 Este documento es el contrato que consumen el frontend y los tests; cambia junto con el código.
 
-> **Estado:** la sección 2 (auth e identidad) está implementada. Las secciones 3–6 son el contrato
-> **planificado** para las fases 2–6; no las consumas todavía. El mapa real de controllers y el ejemplo
-> de cliente HTTP están en [`BACKEND.md`](BACKEND.md).
+> **Estado:** las secciones 2 (auth e identidad) y 3 (catálogo) están implementadas. Las secciones
+> 4–6 son el contrato **planificado** para las fases 3–6; no las consumas todavía. El mapa real de
+> controllers y el ejemplo de cliente HTTP están en [`BACKEND.md`](BACKEND.md).
 
 ## 1. Convenciones
 
@@ -27,7 +27,7 @@ Este documento es el contrato que consumen el frontend y los tests; cambia junto
 | POST | `/auth/logout` | cookie `refresh_token` | Revoca refresh actual; idempotente | ✅ |
 | GET | `/auth/me` | Bearer | Usuario y rol actuales | ✅ |
 | POST | `/users` | Bearer + `ADMIN` | Crea asesor (`ADVISOR`) | ✅ |
-| PATCH | `/users/:id` | Bearer + `ADMIN` | Activa/desactiva o cambia rol | ⏳ Fase 2+ |
+| PATCH | `/users/:id` | Bearer + `ADMIN` | Activa/desactiva o cambia rol | ⏳ pendiente |
 
 `PublicUser` (nunca incluye `passwordHash`):
 
@@ -149,17 +149,173 @@ Content-Type: application/json
 
 El frontend debe usar `credentials: 'include'` y no puede leer la cookie.
 
-## 3. Catálogo (planificado — Fase 2)
+## 3. Catálogo (implementado — Fase 2)
+
+Lectura autenticada para `ADVISOR` y `ADMIN`; escritura solo `ADMIN`. Los precios siempre viajan como
+`Money` (`{ amountMinor, currency }`) y los filtros de precio usan unidades menores.
 
 | Método | Ruta | Rol | Descripción |
 |---|---|---|---|
-| GET | `/catalog/destinations?q=&country=&page=` | autenticado | Busca destinos activos |
-| GET | `/catalog/destinations/:id` | autenticado | Ficha con lat/lng y hero |
-| GET | `/catalog/hotels?destinationId=&maxPriceMinor=&page=` | autenticado | Hoteles activos |
-| GET | `/catalog/activities?destinationId=&interest=` | autenticado | Actividades activas |
-| GET | `/catalog/transport?originId=&destinationId=&mode=` | autenticado | Opciones de transporte |
+| GET | `/catalog/destinations?q=&country=&featured=&page=&pageSize=` | autenticado | Destinos activos, ordenados por destacados y ciudad |
+| GET | `/catalog/destinations/:id` | autenticado | Ficha de un destino activo |
+| GET | `/catalog/hotels?destinationId=&maxPriceMinor=&currency=&page=&pageSize=` | autenticado | Hoteles activos, ordenados por precio |
+| GET | `/catalog/activities?destinationId=&interest=&intensity=&page=&pageSize=` | autenticado | Actividades activas |
+| GET | `/catalog/transport?originId=&destinationId=&mode=&page=&pageSize=` | autenticado | Opciones de transporte activas |
+| POST | `/catalog/destinations` | `ADMIN` | Crea destino |
+| PATCH | `/catalog/destinations/:id` | `ADMIN` | Actualiza campos del destino |
+| DELETE | `/catalog/destinations/:id` | `ADMIN` | Desactiva (soft delete) |
+| POST | `/catalog/hotels` | `ADMIN` | Crea hotel |
+| PATCH | `/catalog/hotels/:id` | `ADMIN` | Actualiza hotel |
+| DELETE | `/catalog/hotels/:id` | `ADMIN` | Desactiva hotel |
+| POST | `/catalog/activities` | `ADMIN` | Crea actividad |
+| PATCH | `/catalog/activities/:id` | `ADMIN` | Actualiza actividad |
+| DELETE | `/catalog/activities/:id` | `ADMIN` | Desactiva actividad |
+| POST | `/catalog/transport` | `ADMIN` | Crea opción de transporte |
+| PATCH | `/catalog/transport/:id` | `ADMIN` | Actualiza opción de transporte |
+| DELETE | `/catalog/transport/:id` | `ADMIN` | Desactiva opción de transporte |
 
-`ADMIN` podrá crear/editar catálogo en la fase 2b (`POST/PATCH /catalog/...`), aún no implementado.
+### 3.1 Listado y ficha de destinos
+
+```http
+GET /api/v1/catalog/destinations?q=cartagena&featured=true&page=1&pageSize=20
+Authorization: Bearer <accessToken>
+```
+
+```http
+200 OK
+{
+  "items": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "city": "Cartagena",
+      "country": "Colombia",
+      "slug": "cartagena",
+      "description": "Ciudad amurallada frente al Caribe...",
+      "heroImageUrl": "https://...",
+      "latitude": 10.391049,
+      "longitude": -75.479426,
+      "timezone": "America/Bogota",
+      "tags": ["playa", "historia", "gastronomia"],
+      "isFeatured": true,
+      "isActive": true,
+      "fromPrice": { "amountMinor": 52000000, "currency": "COP" },
+      "createdAt": "2026-11-02T15:00:00.000Z",
+      "updatedAt": "2026-11-02T15:00:00.000Z"
+    }
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "total": 1
+}
+```
+
+`GET /catalog/destinations/:id` devuelve `{ "destination": { ... } }` con la misma forma.
+
+- `q` busca por `city`, `country` y `slug` con `ILIKE` (índices trigram).
+- `country` compara sin distinguir mayúsculas; `featured` acepta `true`/`false`.
+- `fromPrice` se deriva del hotel activo más económico en COP. Si el destino no tiene hoteles
+  activos en COP, es `null`. No se almacena.
+- Los destinos inactivos no aparecen en listados ni en la ficha (`404`).
+
+### 3.2 Hoteles, actividades y transporte
+
+```http
+GET /api/v1/catalog/hotels?destinationId=<uuid>&maxPriceMinor=60000000&currency=COP
+GET /api/v1/catalog/activities?destinationId=<uuid>&interest=playa&intensity=MEDIUM
+GET /api/v1/catalog/transport?originId=<uuid>&destinationId=<uuid>&mode=FLIGHT
+```
+
+`HotelDto`:
+
+```json
+{
+  "id": "uuid",
+  "destinationId": "uuid",
+  "name": "Hotel Casa San Agustín",
+  "description": "Hotel boutique en una casona colonial.",
+  "category": 5,
+  "roomType": "Suite",
+  "pricePerNight": { "amountMinor": 128000000, "currency": "COP" },
+  "imageUrl": "https://...",
+  "amenities": { "wifi": true, "pool": true },
+  "isActive": true,
+  "createdAt": "2026-11-02T15:00:00.000Z",
+  "updatedAt": "2026-11-02T15:00:00.000Z"
+}
+```
+
+`ActivityDto` añade `intensity` (`LOW|MEDIUM|HIGH`), `durationMinutes`, `pricePerPerson` y `tags`.
+
+`TransportOptionDto`:
+
+```json
+{
+  "id": "uuid",
+  "originDestinationId": "uuid-o-null",
+  "destinationId": "uuid",
+  "mode": "FLIGHT",
+  "provider": "Avianca",
+  "price": { "amountMinor": 45000000, "currency": "COP" },
+  "pricingUnit": "PER_PERSON",
+  "durationMinutes": 90,
+  "isActive": true,
+  "createdAt": "2026-11-02T15:00:00.000Z",
+  "updatedAt": "2026-11-02T15:00:00.000Z"
+}
+```
+
+- `maxPriceMinor` se compara en la moneda indicada por `currency` (por defecto `COP`).
+- `interest` filtra por etiqueta exacta normalizada a minúsculas.
+- `mode` acepta `FLIGHT|BUS|CAR_RENTAL|BOAT|TRAIN`.
+- `pricingUnit` debe respetar el modo: `CAR_RENTAL` solo `PER_DAY`; `FLIGHT` `PER_TRIP` o
+  `PER_PERSON`; `BUS`, `BOAT` y `TRAIN` `PER_PERSON` o `PER_TRIP`. `PER_NIGHT` no aplica a
+  transporte. `originId` y `destinationId` no pueden ser el mismo destino.
+- Los listados devuelven solo ítems activos de destinos activos.
+
+### 3.3 Escritura de catálogo (solo `ADMIN`)
+
+```http
+POST /api/v1/catalog/destinations
+Authorization: Bearer <accessTokenAdmin>
+Content-Type: application/json
+
+{
+  "city": "Bogotá",
+  "country": "Colombia",
+  "latitude": 4.711,
+  "longitude": -74.0721,
+  "tags": ["cultura", "gastronomia"],
+  "isFeatured": true
+}
+```
+
+```http
+201 Created
+{ "destination": { "id": "uuid", "slug": "bogota", "isActive": true, ... } }
+```
+
+- `slug` es opcional; si falta se deriva de `city` (sin tildes, minúsculas y guiones). Es único:
+  duplicado → `409 CONFLICT`.
+- `PATCH` acepta cualquier subconjunto de campos y exige al menos uno; body vacío → `422`.
+- `DELETE` es un **soft delete**: pone `isActive=false` y responde `204`; no borra filas ni rompe
+  referencias de planes existentes.
+- Los cuerpos de hotel/actividad/transporte usan `pricePerNight`, `pricePerPerson` y `price` como
+  `Money`, respectivamente. Ejemplo de hotel:
+
+```json
+{
+  "destinationId": "uuid",
+  "name": "Hotel Nuevo",
+  "category": 4,
+  "roomType": "Doble",
+  "pricePerNight": { "amountMinor": 48000000, "currency": "COP" },
+  "amenities": { "wifi": true, "breakfast": true }
+}
+```
+
+- Los campos desconocidos se rechazan con `422`; los IDs de destino inexistentes responden `404`.
+- Un `ADVISOR` recibe `403 FORBIDDEN` en cualquier escritura de catálogo.
+
 
 ## 4. Solicitud de viaje (planificado — Fase 3)
 
@@ -284,9 +440,9 @@ tipo, destino o moneda → `422`; el servidor recalcula y devuelve el presupuest
 
 El mapa del MVP consume `GET /plans/:id` y `GET /catalog/destinations`; no hay endpoint de tiles.
 El carrusel "Destinos para ti" usa `GET /catalog/destinations?featured=true` (`is_featured`).
-Cada destino incluye `fromPriceMinor` (derivado del hotel activo más económico) y `tags`; los pines de
-sugerencias muestran `fromPriceMinor` y los del plan abierto muestran `budget.total`. Sin plan, no se
-inventa un precio: si `fromPriceMinor` es `null`, el pin solo muestra el nombre.
+Cada destino incluye `fromPrice` (derivado del hotel activo más económico en COP) y `tags`; los pines
+de sugerencias muestran `fromPrice` y los del plan abierto muestran `budget.total`. Sin plan, no se
+inventa un precio: si `fromPrice` es `null`, el pin solo muestra el nombre.
 
 ## 7. RBAC
 
@@ -294,13 +450,13 @@ inventa un precio: si `fromPriceMinor` es `null`, el pin solo muestra el nombre.
 |---|---|---|---|
 | `GET /auth/me` | propio | propio | ✅ |
 | `POST /users` | ❌ (`403`) | ✅ | ✅ |
-| Catálogo (lectura) | ✅ | ✅ | ⏳ Fase 2 |
-| Catálogo (escritura) | ❌ | ✅ | ⏳ Fase 2 |
+| Catálogo (lectura) | ✅ | ✅ | ✅ |
+| Catálogo (escritura) | ❌ (`403`) | ✅ | ✅ |
 | `trip-requests` propias | CRUD | CRUD | ⏳ Fase 3 |
 | `trip-requests` ajenas | ❌ (`404`) | ✅ | ⏳ Fase 3 |
 | `plans` propios | CRUD + publicar | CRUD + publicar | ⏳ Fases 4–6 |
 | `plans` ajenos | ❌ (`404`) | ✅ | ⏳ Fases 4–6 |
-| `PATCH /users/:id` | ❌ | ✅ | ⏳ Fase 2+ |
+| `PATCH /users/:id` | ❌ | ✅ | ⏳ pendiente |
 
 Recurso ajeno ⇒ `404`, no `403` (no revelar existencia). El `advisorId` sale del JWT verificado, nunca
 del body.

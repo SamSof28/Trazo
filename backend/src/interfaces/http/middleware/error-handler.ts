@@ -28,6 +28,18 @@ function problem(
   };
 }
 
+function zodErrors(error: ZodError): ProblemDetails['errors'] {
+  return error.issues.flatMap((issue) => {
+    if (issue.code === 'unrecognized_keys') {
+      return issue.keys.map((key) => ({
+        field: [...issue.path, key].join('.') || key,
+        message: 'Campo no permitido',
+      }));
+    }
+    return [{ field: issue.path.join('.') || '(root)', message: issue.message }];
+  });
+}
+
 export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   const requestId = requestIdOf(req);
 
@@ -38,23 +50,14 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
       'Datos inválidos',
       requestId,
       'Revisa los campos enviados',
-      error.issues.map((issue) => ({
-        field: issue.path.join('.') || '(root)',
-        message: issue.message,
-      })),
+      zodErrors(error),
     );
     res.status(422).type('application/problem+json').json(body);
     return;
   }
 
   if (error instanceof AppError) {
-    const body = problem(
-      error.status,
-      error.code,
-      error.title,
-      requestId,
-      error.detail,
-    );
+    const body = problem(error.status, error.code, error.title, requestId, error.detail);
     res.status(error.status).type('application/problem+json').json(body);
     return;
   }

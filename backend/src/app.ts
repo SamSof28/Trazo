@@ -5,7 +5,11 @@ import helmet from 'helmet';
 import { env } from './config/env.js';
 import { httpLogger } from './config/logger.js';
 import type { AccessTokenService } from './domain/identity/ports.js';
+import type { ActivityController } from './interfaces/http/activity.controller.js';
 import type { AuthController } from './interfaces/http/auth.controller.js';
+import type { DestinationController } from './interfaces/http/destination.controller.js';
+import type { HotelController } from './interfaces/http/hotel.controller.js';
+import type { TransportController } from './interfaces/http/transport.controller.js';
 import type { UserController } from './interfaces/http/user.controller.js';
 import { errorHandler, notFoundHandler } from './interfaces/http/middleware/error-handler.js';
 import { globalLimiter } from './interfaces/http/rate-limit.js';
@@ -14,6 +18,10 @@ import { createApiRouter } from './interfaces/http/routes.js';
 export interface AppDependencies {
   authController: AuthController;
   userController: UserController;
+  destinationController: DestinationController;
+  hotelController: HotelController;
+  activityController: ActivityController;
+  transportController: TransportController;
   accessTokens: AccessTokenService;
   healthCheck: () => Promise<boolean>;
 }
