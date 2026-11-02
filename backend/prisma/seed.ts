@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import type { ActivityIntensity, PricingUnit, TransportMode } from '@turiviaje/shared';
 import { env } from '../src/config/env.js';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({ datasourceUrl: env.DIRECT_URL });
 
 interface DestinationSeed {
   city: string;
