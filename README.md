@@ -7,9 +7,11 @@ actividades, transporte, itinerario por días, presupuesto y ficha publicable).
 La experiencia se inspira en [layla.ai](https://layla.ai/es): sin formularios de búsqueda, un único
 *super prompt*, y después un panel dividido (chat a la izquierda, resultados y mapa a la derecha).
 
-> **Estado:** repositorio en fase de diseño. No hay código todavía. Este README y `AGENTS.md` son la
-> fuente de verdad del producto y del dominio; `docs/` contiene arquitectura, contrato de API,
-> modelo de datos y hoja de ruta. Léelos antes de escribir código.
+> **Estado:** el backend de las fases 0 y 1 ya está implementado (monorepo, configuración validada,
+> identidad, RBAC y tests). El frontend y los módulos de catálogo, intake y planificación aún no
+> existen. Este README y `AGENTS.md` son la fuente de verdad del producto y del dominio; `docs/`
+> contiene arquitectura, contrato de API, modelo de datos, mapa del backend, IA y hoja de ruta. Léelos
+> antes de escribir código.
 
 ---
 

@@ -1,0 +1,127 @@
+import request from 'supertest';
+import { describe, expect, it } from 'vitest';
+import { buildTestApp, loginAs } from './test-app.js';
+
+describe('HTTP auth', () => {
+  it('serves health checks', async () => {
+    const { app } = buildTestApp();
+    const response = await request(app).get('/health');
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ status: 'ok' });
+
+    const ready = await request(app).get('/health/ready');
+    expect(ready.status).toBe(200);
+    expect(ready.body).toEqual({ status: 'ready' });
+  });
+
+  it('returns problem+json for unknown routes', async () => {
+    const { app } = buildTestApp();
+    const response = await request(app).get('/api/v1/nope');
+    expect(response.status).toBe(404);
+    expect(response.type).toBe('application/problem+json');
+    expect(response.body.code).toBe('NOT_FOUND');
+  });
+
+  it('logs in and sets an HttpOnly refresh cookie without exposing the password hash', async () => {
+    const { app } = buildTestApp();
+    const response = await request(app).post('/api/v1/auth/login').send({
+      email: '  ASESOR@TURIVIAJE.CO ',
+      password: 'secret-password',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.accessToken).toBeTypeOf('string');
+    expect(response.body.expiresIn).toBe(900);
+    expect(response.body.user.email).toBe('asesor@turiviaje.co');
+    expect(response.body.user).not.toHaveProperty('passwordHash');
+
+    const cookies = response.headers['set-cookie'];
+    const cookie = Array.isArray(cookies) ? cookies[0] : cookies;
+    expect(cookie).toContain('refresh_token=');
+    expect(cookie).toContain('HttpOnly');
+    expect(cookie).toContain('SameSite=Strict');
+  });
+
+  it('returns 422 with field errors for an invalid payload', async () => {
+    const { app } = buildTestApp();
+    const response = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: 'not-an-email', password: '' });
+
+    expect(response.status).toBe(422);
+    expect(response.type).toBe('application/problem+json');
+    expect(response.body.code).toBe('VALIDATION_ERROR');
+    expect(response.body.errors.length).toBeGreaterThan(0);
+  });
+
+  it('rejects /auth/me without a token and accepts a valid one', async () => {
+    const { app } = buildTestApp();
+
+    const anonymous = await request(app).get('/api/v1/auth/me');
+    expect(anonymous.status).toBe(401);
+    expect(anonymous.body.code).toBe('UNAUTHENTICATED');
+
+    const { accessToken } = await loginAs(app, 'asesor@turiviaje.co');
+    const me = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(me.status).toBe(200);
+    expect(me.body.user.email).toBe('asesor@turiviaje.co');
+    expect(me.body.user.role).toBe('ADVISOR');
+  });
+
+  it('rotates the refresh cookie and rejects a missing refresh token', async () => {
+    const { app } = buildTestApp();
+    const { cookie } = await loginAs(app, 'asesor@turiviaje.co');
+
+    const refreshed = await request(app).post('/api/v1/auth/refresh').set('Cookie', cookie);
+    expect(refreshed.status).toBe(200);
+    expect(refreshed.body.accessToken).toBeTypeOf('string');
+    expect(refreshed.headers['set-cookie']).toBeDefined();
+
+    const missing = await request(app).post('/api/v1/auth/refresh');
+    expect(missing.status).toBe(401);
+    expect(missing.body.code).toBe('UNAUTHENTICATED');
+  });
+
+  it('logs out idempotently', async () => {
+    const { app } = buildTestApp();
+    const { cookie } = await loginAs(app, 'asesor@turiviaje.co');
+
+    const response = await request(app).post('/api/v1/auth/logout').set('Cookie', cookie);
+    expect(response.status).toBe(204);
+  });
+
+  it('forbids ADVISOR from creating users and allows ADMIN', async () => {
+    const { app } = buildTestApp();
+    const advisor = await loginAs(app, 'asesor@turiviaje.co');
+    const admin = await loginAs(app, 'admin@turiviaje.co');
+
+    const forbidden = await request(app)
+      .post('/api/v1/users')
+      .set('Authorization', `Bearer ${advisor.accessToken}`)
+      .send({
+        name: 'Nuevo Asesor',
+        email: 'nuevo@turiviaje.co',
+        password: 'password-larga-123',
+        role: 'ADVISOR',
+      });
+    expect(forbidden.status).toBe(403);
+    expect(forbidden.body.code).toBe('FORBIDDEN');
+
+    const created = await request(app)
+      .post('/api/v1/users')
+      .set('Authorization', `Bearer ${admin.accessToken}`)
+      .send({
+        name: 'Nuevo Asesor',
+        email: 'nuevo@turiviaje.co',
+        password: 'password-larga-123',
+        role: 'ADVISOR',
+      });
+
+    expect(created.status).toBe(201);
+    expect(created.body.user.email).toBe('nuevo@turiviaje.co');
+    expect(created.body.user).not.toHaveProperty('passwordHash');
+  });
+});

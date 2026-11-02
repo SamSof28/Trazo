@@ -4,7 +4,7 @@ Entrega **incremental por rebanadas verticales**. Una fase no empieza hasta que 
 definición de terminado (DoD). Cada rebanada incluye dominio + caso de uso + adaptador + ruta + tests +
 docs. No se hace `git commit` sin autorización del usuario.
 
-**Fase actual: 0 — Fundación. Siguiente rebanada: 0.1 (scaffold del monorepo).**
+**Fase actual: 2 — Catálogo. Fase 0 y backend de Fase 1 completos; 1.4 (frontend) pendiente.**
 
 ## DoD común
 
@@ -16,27 +16,28 @@ docs. No se hace `git commit` sin autorización del usuario.
 
 ## Fase 0 — Fundación (sin funcionalidad de negocio)
 
-| Rebanada | Entrega |
-|---|---|
-| 0.1 | Monorepo npm workspaces, `backend/`, `frontend/`, `packages/shared/`, TS strict, ESLint flat, Prettier, Vitest |
-| 0.2 | `config/env.ts` con Zod, `config/container.ts`, logger pino con redacción, `errorHandler` problem+json, `/health` |
-| 0.3 | `prisma/schema.prisma` con `users` + `refresh_tokens`, migración inicial, seed de admin |
-| 0.4 | CI local: script `verify` (`lint → typecheck → test → build`) |
+| Rebanada | Entrega | Estado |
+|---|---|---|
+| 0.1 | Monorepo npm workspaces, `backend/`, `packages/shared/`, TS strict, ESLint flat, Prettier, Vitest. `frontend/` queda para su fase | ✅ |
+| 0.2 | `config/env.ts` con Zod, `config/container.ts`, logger pino con redacción, `errorHandler` problem+json, `/health` y `/health/ready` | ✅ |
+| 0.3 | `prisma/schema.prisma` con todo el dominio, migración `0001_init` con CHECK constraints, seed de admin | ✅ código; ⏳ aplicar migración/seed con credenciales reales |
+| 0.4 | Script `verify` (`lint → typecheck → test → build`) | ✅ |
 
 **DoD:** `npm run dev -w backend` levanta, `/health/ready` responde, la migración aplica en Supabase,
-`packages/shared` se importa desde ambos workspaces.
+`packages/shared` se importa desde ambos workspaces. El código y los tests están listos; la migración
+y el seed se ejecutan cuando el equipo configure `DATABASE_URL`/`DIRECT_URL`.
 
 ## Fase 1 — Identidad y acceso
 
-| Rebanada | Entrega |
-|---|---|
-| 1.1 | `User` + `PasswordHasher` (argon2id) + `POST /auth/login` + test de credenciales |
-| 1.2 | Access JWT + refresh rotativo con familia y detección de reuso + `/auth/refresh`, `/auth/logout` |
-| 1.3 | `requireAuth`, `requireRole`, `GET /auth/me`, `POST /users` (ADMIN) |
-| 1.4 | Frontend: `/login`, guard de rutas, restauración de sesión, cliente HTTP con refresh silencioso |
+| Rebanada | Entrega | Estado |
+|---|---|---|
+| 1.1 | `User` + `PasswordHasher` (argon2id) + `POST /auth/login` + test de credenciales | ✅ |
+| 1.2 | Access JWT + refresh rotativo con familia y detección de reuso + `/auth/refresh`, `/auth/logout` | ✅ |
+| 1.3 | `requireAuth`, `requireRole`, `GET /auth/me`, `POST /users` (ADMIN) | ✅ |
+| 1.4 | Frontend: `/login`, guard de rutas, restauración de sesión, cliente HTTP con refresh silencioso | ⏳ |
 
 **DoD:** no existe registro público; un `ADVISOR` no puede crear usuarios; reuso de refresh revoca la
-familia; tests de 401/403/429.
+familia; tests de 401/403/429. Backend cumplido (22 tests + 6 de shared); falta la rebanada 1.4.
 
 ## Fase 2 — Catálogo
 

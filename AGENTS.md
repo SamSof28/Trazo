@@ -1,7 +1,9 @@
 # AGENTS.md
 
 Instrucciones para sesiones de OpenCode en **TuriViajes** (Módulo 1: diseñador inteligente de planes
-turísticos). Repo en estado **greenfield**: solo documentación, sin scaffold ni git inicializado.
+turísticos). El repositorio ya tiene el monorepo, el backend de Fase 0 y el backend de Fase 1
+(identidad) implementados y con tests. El frontend y los módulos de catálogo/planificación aún no
+existen.
 
 ## Contexto de producto
 
@@ -10,7 +12,8 @@ Un asesor escribe el viaje en lenguaje natural y la app devuelve un plan turíst
 el proceso manual en hojas de cálculo y correos. UX tipo Layla.ai: super prompt → chat que pregunta
 solo lo que falta → split-view con mapa, carrusel y timeline.
 
-Problema, objetivo, alcance, HUs y diagramas: [`README.md`](README.md) §1–§8. Fase actual: **0**
+Problema, objetivo, alcance, HUs y diagramas: [`README.md`](README.md) §1–§8. Fase actual: **2 —
+Catálogo**; la Fase 1 quedó completa en backend y la 1.4 (frontend) está pendiente
 ([`docs/ROADMAP.md`](docs/ROADMAP.md)).
 
 ## Leer antes de codificar
@@ -20,6 +23,8 @@ Problema, objetivo, alcance, HUs y diagramas: [`README.md`](README.md) §1–§8
 3. [`docs/DOMAIN.md`](docs/DOMAIN.md) — tablas, invariantes, presupuesto.
 4. [`docs/API.md`](docs/API.md) — contrato REST acordado.
 5. [`docs/ROADMAP.md`](docs/ROADMAP.md) — fase actual y siguiente rebanada.
+6. [`docs/BACKEND.md`](docs/BACKEND.md) — mapa real de controllers, endpoints, auth y conexión del frontend.
+7. [`docs/AI.md`](docs/AI.md) — configuración de Gemini, prompt de negocio y grounding al catálogo.
 
 Si el código contradice estos docs, gana el código ejecutable: actualiza el doc en el mismo cambio.
 
@@ -35,26 +40,39 @@ Si el código contradice estos docs, gana el código ejecutable: actualiza el do
 
 ## Stack y comandos
 
-Monorepo npm workspaces: `backend/`, `frontend/`, `packages/shared/`.
+Monorepo npm workspaces: `backend/`, `packages/shared/`; `frontend/` se agrega en la rebanada 1.4.
 
 ```bash
 npm install                 # raíz
 npm run dev -w backend      # API en :3000 (tsx watch)
-npm run dev -w frontend     # Vite en :5173
+npm run dev -w frontend     # Vite en :5173 (cuando exista frontend/)
 npm run lint                # ESLint flat, todos los workspaces
 npm run typecheck           # tsc --noEmit
 npm run test                # Vitest
-npm run test -w backend -- src/application/plan/create-plan.use-case.test.ts  # un archivo
-npm run test -w backend -- -t "recalcula"                                     # por nombre
-npm run build               # backend tsc + frontend vite build
+npm run verify              # lint → typecheck → test → build
+npm run test -w @turiviaje/backend -- test/auth.http.test.ts  # un archivo
+npm run test -w @turiviaje/backend -- -t "rotates"           # por nombre
+npm run build               # backend tsc (frontend cuando exista)
+npm run db:generate -w backend      # prisma generate
 npm run db:migrate -w backend       # prisma migrate dev (requiere DIRECT_URL)
 npm run db:deploy -w backend        # prisma migrate deploy
 npm run db:seed -w backend
 ```
 
-Orden de verificación antes de decir "listo": `lint → typecheck → test → build`.
-Estos scripts **aún no existen**; al crear el scaffold, respeta exactamente estos nombres. Los de
-Prisma son scripts npm (`npm exec -w backend -- prisma ...`); `npx prisma ... -w backend` no funciona.
+- El backend carga **`backend/.env`**, no el `.env` de la raíz. Cópialo de `.env.example`.
+- Los scripts ya existen; `npm run verify` es el orden oficial antes de decir "listo".
+- Prisma CLI: usar los scripts npm (`npm exec -w backend -- prisma ...`); `npx prisma ... -w backend` no funciona.
+
+## Estado actual del backend
+
+- **Implementado:** scaffold del monorepo, `config/env.ts` con Zod, logger pino con redacción,
+  `errorHandler` problem+json, `/health`, `/health/ready`, Prisma schema completo + migración
+  `0001_init` generada, seed de admin, login, refresh rotativo con detección de reuso, logout,
+  `/auth/me`, RBAC y `POST /users` (solo `ADMIN`).
+- **Tests:** 22 de backend + 6 de `packages/shared`, con fakes (sin DB ni red).
+- **Pendiente inmediato:** aplicar la migración y el seed cuando existan credenciales reales de
+  Supabase; el frontend de la rebanada 1.4; después, Fase 2 (catálogo).
+- **Contrato de conexión:** [`docs/BACKEND.md`](docs/BACKEND.md). **IA:** [`docs/AI.md`](docs/AI.md).
 
 ## Estructura y regla de dependencia
 

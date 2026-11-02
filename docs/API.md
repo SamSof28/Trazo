@@ -3,6 +3,10 @@
 Base: `/api/v1`. JSON UTF-8. Autenticación `Authorization: Bearer <accessToken>` salvo donde se indique.
 Este documento es el contrato que consumen el frontend y los tests; cambia junto con el código.
 
+> **Estado:** la sección 2 (auth e identidad) está implementada. Las secciones 3–6 son el contrato
+> **planificado** para las fases 2–6; no las consumas todavía. El mapa real de controllers y el ejemplo
+> de cliente HTTP están en [`BACKEND.md`](BACKEND.md).
+
 ## 1. Convenciones
 
 - **Fechas:** `YYYY-MM-DD` para días; ISO-8601 UTC (`2026-11-03T14:05:00Z`) para instantes.
@@ -14,30 +18,138 @@ Este documento es el contrato que consumen el frontend y los tests; cambia junto
 - **Idempotencia:** `POST /plans/:id/publish` y `/generate` aceptan `Idempotency-Key` (UUID).
 - **Campos desconocidos:** rechazados (Zod `.strict()`) → `422 VALIDATION_ERROR`.
 
-## 2. Auth e identidad
+## 2. Auth e identidad (implementado)
 
-| Método | Ruta | Rol | Descripción |
-|---|---|---|---|
-| POST | `/auth/login` | público | Email + password → access token + cookie refresh |
-| POST | `/auth/refresh` | cookie | Rota refresh y devuelve nuevo access |
-| POST | `/auth/logout` | autenticado | Revoca refresh actual |
-| GET | `/auth/me` | autenticado | Usuario y rol actuales |
-| POST | `/users` | `ADMIN` | Crea asesor (`ADVISOR`) |
-| PATCH | `/users/:id` | `ADMIN` | Activa/desactiva o cambia rol |
+| Método | Ruta | Auth | Descripción | Estado |
+|---|---|---|---|---|
+| POST | `/auth/login` | público, 5/min/IP | Email + password → access token + cookie refresh | ✅ |
+| POST | `/auth/refresh` | cookie `refresh_token`, 30/min/IP | Rota refresh y devuelve nuevo access | ✅ |
+| POST | `/auth/logout` | cookie `refresh_token` | Revoca refresh actual; idempotente | ✅ |
+| GET | `/auth/me` | Bearer | Usuario y rol actuales | ✅ |
+| POST | `/users` | Bearer + `ADMIN` | Crea asesor (`ADVISOR`) | ✅ |
+| PATCH | `/users/:id` | Bearer + `ADMIN` | Activa/desactiva o cambia rol | ⏳ Fase 2+ |
+
+`PublicUser` (nunca incluye `passwordHash`):
+
+```json
+{
+  "id": "uuid",
+  "name": "Asesor Demo",
+  "email": "asesor@agencia.co",
+  "role": "ADVISOR",
+  "isActive": true,
+  "createdAt": "2026-11-02T15:00:00.000Z",
+  "lastLoginAt": "2026-11-02T15:00:00.000Z"
+}
+```
+
+### 2.1 Login
 
 ```http
 POST /api/v1/auth/login
-{ "email": "asesor@agencia.co", "password": "..." }
+Content-Type: application/json
 
-200 OK
-Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
-{ "accessToken": "...", "expiresIn": 900, "user": { "id": "...", "name": "...", "role": "ADVISOR" } }
+{ "email": "asesor@agencia.co", "password": "..." }
 ```
 
-Errores: `401 UNAUTHENTICATED` (credenciales inválidas, mismo mensaje para email inexistente),
-`429 RATE_LIMITED` (5/min/IP).
+```http
+200 OK
+Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Expires=...
 
-## 3. Catálogo (solo lectura en el MVP)
+{ "accessToken": "...", "expiresIn": 900, "user": { ...PublicUser } }
+```
+
+- El email se normaliza (trim + minúsculas).
+- `401 UNAUTHENTICATED` para email inexistente o contraseña incorrecta (mismo mensaje).
+- `422 VALIDATION_ERROR` si el body no cumple el esquema.
+- `429 RATE_LIMITED` a partir de 5 intentos/min/IP.
+- El refresh token **no** viaja en el body.
+
+### 2.2 Refresh
+
+```http
+POST /api/v1/auth/refresh
+Cookie: refresh_token=...
+```
+
+```http
+200 OK
+Set-Cookie: refresh_token=<nuevo>; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth
+
+{ "accessToken": "...", "expiresIn": 900 }
+```
+
+- Rotación obligatoria: el token anterior queda revocado.
+- Reuso de un token revocado → `401` y revocación de toda la familia.
+- Token ausente, expirado o desconocido → `401 UNAUTHENTICATED`.
+- No requiere `Authorization`; la cookie es la credencial.
+
+### 2.3 Logout
+
+```http
+POST /api/v1/auth/logout
+Cookie: refresh_token=...
+```
+
+```http
+204 No Content
+Set-Cookie: refresh_token=; ...; Expires=Thu, 01 Jan 1970 00:00:00 GMT
+```
+
+Idempotente: sin cookie o con token ya revocado también responde `204`.
+
+### 2.4 Me
+
+```http
+GET /api/v1/auth/me
+Authorization: Bearer <accessToken>
+```
+
+```http
+200 OK
+{ "user": { ...PublicUser } }
+```
+
+`401` si el token falta, expiró, es inválido o el usuario fue desactivado.
+
+### 2.5 Crear usuario (ADMIN)
+
+```http
+POST /api/v1/users
+Authorization: Bearer <accessTokenAdmin>
+Content-Type: application/json
+
+{
+  "name": "Asesor Nuevo",
+  "email": "asesor@agencia.co",
+  "password": "password-larga-123",
+  "role": "ADVISOR"
+}
+```
+
+```http
+201 Created
+{ "user": { ...PublicUser } }
+```
+
+- `password` mínimo 12 caracteres; `role` por defecto `ADVISOR`.
+- `ADVISOR` → `403 FORBIDDEN`; email duplicado → `409 CONFLICT`.
+- No hay registro público: solo un `ADMIN` crea usuarios.
+
+### 2.6 Cookie de refresh
+
+| Atributo | Valor |
+|---|---|
+| Nombre | `refresh_token` |
+| `HttpOnly` | siempre |
+| `Secure` | sí en producción; no en desarrollo local |
+| `SameSite` | `Strict` |
+| `Path` | `/api/v1/auth` |
+| Vigencia | `REFRESH_TOKEN_TTL_DAYS` (7 por defecto) |
+
+El frontend debe usar `credentials: 'include'` y no puede leer la cookie.
+
+## 3. Catálogo (planificado — Fase 2)
 
 | Método | Ruta | Rol | Descripción |
 |---|---|---|---|
@@ -49,7 +161,7 @@ Errores: `401 UNAUTHENTICATED` (credenciales inválidas, mismo mensaje para emai
 
 `ADMIN` podrá crear/editar catálogo en la fase 2b (`POST/PATCH /catalog/...`), aún no implementado.
 
-## 4. Solicitud de viaje (intake)
+## 4. Solicitud de viaje (planificado — Fase 3)
 
 | Método | Ruta | Rol | Descripción |
 |---|---|---|---|
@@ -108,7 +220,7 @@ El cliente consulta `GET /trip-requests/:id` hasta `GENERATED` (incluye `planId`
 (incluye `error.code`). Timeout de IA → `FAILED` + `AI_UNAVAILABLE`; reintentar es otro `POST /generate`.
 Doble generación con job activo → `409 CONFLICT`.
 
-## 5. Planes
+## 5. Planes (planificado — Fases 4–6)
 
 | Método | Ruta | Rol | Descripción |
 |---|---|---|---|
@@ -168,7 +280,7 @@ PATCH /api/v1/plans/7a2b.../items/i2
 Reglas: editar un plan `PUBLISHED` → `409 CONFLICT` (`PLAN_NOT_EDITABLE`); `catalogItemId` de otro
 tipo, destino o moneda → `422`; el servidor recalcula y devuelve el presupuesto actualizado.
 
-## 6. Mapa y sugerencias
+## 6. Mapa y sugerencias (planificado)
 
 El mapa del MVP consume `GET /plans/:id` y `GET /catalog/destinations`; no hay endpoint de tiles.
 El carrusel "Destinos para ti" usa `GET /catalog/destinations?featured=true` (`is_featured`).
@@ -178,27 +290,30 @@ inventa un precio: si `fromPriceMinor` es `null`, el pin solo muestra el nombre.
 
 ## 7. RBAC
 
-| Recurso | `ADVISOR` | `ADMIN` |
-|---|---|---|
-| Catálogo (lectura) | ✅ | ✅ |
-| Catálogo (escritura) | ❌ | ✅ (fase 2b) |
-| `trip-requests` propias | CRUD | CRUD |
-| `trip-requests` ajenas | ❌ (`404`) | ✅ |
-| `plans` propios | CRUD + publicar | CRUD + publicar |
-| `plans` ajenos | ❌ (`404`) | ✅ |
-| Usuarios | ❌ | ✅ |
+| Recurso | `ADVISOR` | `ADMIN` | Estado |
+|---|---|---|---|
+| `GET /auth/me` | propio | propio | ✅ |
+| `POST /users` | ❌ (`403`) | ✅ | ✅ |
+| Catálogo (lectura) | ✅ | ✅ | ⏳ Fase 2 |
+| Catálogo (escritura) | ❌ | ✅ | ⏳ Fase 2 |
+| `trip-requests` propias | CRUD | CRUD | ⏳ Fase 3 |
+| `trip-requests` ajenas | ❌ (`404`) | ✅ | ⏳ Fase 3 |
+| `plans` propios | CRUD + publicar | CRUD + publicar | ⏳ Fases 4–6 |
+| `plans` ajenos | ❌ (`404`) | ✅ | ⏳ Fases 4–6 |
+| `PATCH /users/:id` | ❌ | ✅ | ⏳ Fase 2+ |
 
-Recurso ajeno ⇒ `404`, no `403` (no revelar existencia).
+Recurso ajeno ⇒ `404`, no `403` (no revelar existencia). El `advisorId` sale del JWT verificado, nunca
+del body.
 
 ## 8. Límites
 
-| Endpoint | Límite |
-|---|---|
-| `POST /auth/login` | 5/min/IP |
-| `POST /auth/refresh` | 30/min/IP |
-| `POST /trip-requests` | 20/h/usuario |
-| `POST /trip-requests/:id/generate` | 10/h/usuario |
-| Global | 300/min/IP |
+| Endpoint | Límite | Estado |
+|---|---|---|
+| `POST /auth/login` | 5/min/IP | ✅ |
+| `POST /auth/refresh` | 30/min/IP | ✅ |
+| Global | 300/min/IP | ✅ |
+| `POST /trip-requests` | 20/h/usuario | ⏳ Fase 3 |
+| `POST /trip-requests/:id/generate` | 10/h/usuario | ⏳ Fase 4 |
 
 Cabeceras `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`; al exceder, `429` con
-`Retry-After`.
+`Retry-After`. En tests se desactiva con `RATE_LIMIT_ENABLED=false`; en producción debe quedar `true`.

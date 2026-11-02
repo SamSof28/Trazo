@@ -1,0 +1,332 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADVISOR
+  ADMIN
+}
+
+enum TripRequestStatus {
+  COLLECTING
+  AWAITING_INPUT
+  READY
+  GENERATING
+  GENERATED
+  FAILED
+}
+
+enum PlanStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum TravelerType {
+  SOLO
+  COUPLE
+  FAMILY
+  FRIENDS
+  BUSINESS
+}
+
+enum TransportMode {
+  FLIGHT
+  BUS
+  CAR_RENTAL
+  BOAT
+  TRAIN
+}
+
+enum PricingUnit {
+  PER_PERSON
+  PER_NIGHT
+  PER_DAY
+  PER_TRIP
+}
+
+enum PlanItemType {
+  ACCOMMODATION
+  ACTIVITY
+  TRANSPORT
+}
+
+enum ActivityIntensity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum AiJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String    @db.VarChar(120)
+  email        String    @unique @db.VarChar(320)
+  passwordHash String    @map("password_hash")
+  role         Role      @default(ADVISOR)
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  refreshTokens RefreshToken[]
+  tripRequests  TripRequest[]
+  plans         Plan[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash") @db.VarChar(128)
+  familyId     String    @map("family_id") @db.Uuid
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz(6)
+  replacedById String?   @map("replaced_by_id") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedBy RefreshToken? @relation("RefreshTokenRotation", fields: [replacedById], references: [id], onDelete: SetNull)
+  replaces   RefreshToken[] @relation("RefreshTokenRotation")
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+model Destination {
+  id            String   @id @default(uuid()) @db.Uuid
+  city          String   @db.VarChar(120)
+  country       String   @db.VarChar(120)
+  slug          String   @unique @db.VarChar(160)
+  description   String?
+  heroImageUrl  String?  @map("hero_image_url")
+  latitude      Decimal  @db.Decimal(9, 6)
+  longitude     Decimal  @db.Decimal(9, 6)
+  timezone      String   @default("America/Bogota") @db.VarChar(64)
+  tags          String[] @default([])
+  isFeatured    Boolean  @default(false) @map("is_featured")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  hotels                 Hotel[]
+  activities             Activity[]
+  transportOptions       TransportOption[] @relation("TransportDestination")
+  originTransportOptions TransportOption[] @relation("TransportOrigin")
+  tripRequests           TripRequest[]
+  plans                  Plan[]
+
+  @@index([country, isActive])
+  @@map("destinations")
+}
+
+model Hotel {
+  id                  String   @id @default(uuid()) @db.Uuid
+  destinationId       String   @map("destination_id") @db.Uuid
+  name                String   @db.VarChar(160)
+  description         String?
+  category            Int      @db.SmallInt
+  roomType            String   @map("room_type") @db.VarChar(80)
+  pricePerNightMinor  BigInt   @map("price_per_night_minor")
+  currency            String   @default("COP") @db.Char(3)
+  imageUrl            String?  @map("image_url")
+  amenities           Json?
+  isActive            Boolean  @default(true) @map("is_active")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Restrict)
+  planItems   PlanItem[]
+
+  @@index([destinationId, isActive, pricePerNightMinor])
+  @@map("hotels")
+}
+
+model Activity {
+  id                   String            @id @default(uuid()) @db.Uuid
+  destinationId        String            @map("destination_id") @db.Uuid
+  name                 String            @db.VarChar(160)
+  description          String?
+  intensity            ActivityIntensity @default(LOW)
+  durationMinutes      Int               @map("duration_minutes")
+  pricePerPersonMinor  BigInt            @map("price_per_person_minor")
+  currency             String            @default("COP") @db.Char(3)
+  imageUrl             String?           @map("image_url")
+  tags                 String[]          @default([])
+  isActive             Boolean           @default(true) @map("is_active")
+  createdAt            DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Restrict)
+  planItems   PlanItem[]
+
+  @@index([destinationId, isActive])
+  @@map("activities")
+}
+
+model TransportOption {
+  id                   String        @id @default(uuid()) @db.Uuid
+  originDestinationId  String?       @map("origin_destination_id") @db.Uuid
+  destinationId        String        @map("destination_id") @db.Uuid
+  mode                 TransportMode
+  provider             String        @db.VarChar(120)
+  priceMinor           BigInt        @map("price_minor")
+  currency             String        @default("COP") @db.Char(3)
+  pricingUnit          PricingUnit   @map("pricing_unit")
+  durationMinutes      Int           @map("duration_minutes")
+  isActive             Boolean       @default(true) @map("is_active")
+  createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  destination Destination  @relation("TransportDestination", fields: [destinationId], references: [id], onDelete: Restrict)
+  origin      Destination? @relation("TransportOrigin", fields: [originDestinationId], references: [id], onDelete: SetNull)
+  planItems   PlanItem[]
+
+  @@index([destinationId, isActive, mode])
+  @@map("transport_options")
+}
+
+model TripRequest {
+  id              String            @id @default(uuid()) @db.Uuid
+  advisorId       String            @map("advisor_id") @db.Uuid
+  promptOriginal  String            @map("prompt_original") @db.VarChar(2000)
+  status          TripRequestStatus @default(COLLECTING)
+  extractedSlots  Json?             @map("extracted_slots")
+  missingFields   String[]          @default([]) @map("missing_fields")
+  destinationId   String?           @map("destination_id") @db.Uuid
+  startDate       DateTime?         @map("start_date") @db.Date
+  endDate         DateTime?         @map("end_date") @db.Date
+  durationDays    Int?              @map("duration_days") @db.SmallInt
+  adults          Int               @default(1) @db.SmallInt
+  children        Int               @default(0) @db.SmallInt
+  travelerType    TravelerType?     @map("traveler_type")
+  interests       String[]          @default([])
+  budgetMinMinor  BigInt?           @map("budget_min_minor")
+  budgetMaxMinor  BigInt?           @map("budget_max_minor")
+  currency        String            @default("COP") @db.Char(3)
+  errorCode       String?           @map("error_code") @db.VarChar(64)
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime?         @map("deleted_at") @db.Timestamptz(6)
+
+  advisor     User        @relation(fields: [advisorId], references: [id], onDelete: Restrict)
+  destination Destination? @relation(fields: [destinationId], references: [id], onDelete: Restrict)
+  plan        Plan?
+  aiJobs      AiJob[]
+
+  @@index([advisorId, status])
+  @@map("trip_requests")
+}
+
+model Plan {
+  id             String     @id @default(uuid()) @db.Uuid
+  tripRequestId  String     @unique @map("trip_request_id") @db.Uuid
+  advisorId      String     @map("advisor_id") @db.Uuid
+  destinationId  String     @map("destination_id") @db.Uuid
+  title          String?    @db.VarChar(120)
+  status         PlanStatus @default(DRAFT)
+  summary        String?
+  heroImageUrl   String?    @map("hero_image_url")
+  tags           String[]   @default([])
+  currency       String     @default("COP") @db.Char(3)
+  subtotalMinor  BigInt     @default(0) @map("subtotal_minor")
+  marginPercent  Decimal    @default(0) @map("margin_percent") @db.Decimal(5, 2)
+  marginMinor    BigInt     @default(0) @map("margin_minor")
+  totalMinor     BigInt     @default(0) @map("total_minor")
+  version        Int        @default(1)
+  publishedAt    DateTime?  @map("published_at") @db.Timestamptz(6)
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt      DateTime?  @map("deleted_at") @db.Timestamptz(6)
+
+  tripRequest TripRequest @relation(fields: [tripRequestId], references: [id], onDelete: Restrict)
+  advisor     User        @relation(fields: [advisorId], references: [id], onDelete: Restrict)
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Restrict)
+  days        PlanDay[]
+
+  @@index([advisorId, status])
+  @@index([destinationId])
+  @@map("plans")
+}
+
+model PlanDay {
+  id        String   @id @default(uuid()) @db.Uuid
+  planId    String   @map("plan_id") @db.Uuid
+  dayNumber Int      @map("day_number") @db.SmallInt
+  date      DateTime @db.Date
+  title     String?  @db.VarChar(160)
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  plan  Plan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+  items PlanItem[]
+
+  @@unique([planId, dayNumber])
+  @@map("plan_days")
+}
+
+model PlanItem {
+  id                String        @id @default(uuid()) @db.Uuid
+  planDayId         String        @map("plan_day_id") @db.Uuid
+  type              PlanItemType
+  hotelId           String?       @map("hotel_id") @db.Uuid
+  activityId        String?       @map("activity_id") @db.Uuid
+  transportOptionId String?       @map("transport_option_id") @db.Uuid
+  nameSnapshot      String        @map("name_snapshot") @db.VarChar(160)
+  unitPriceMinor    BigInt        @map("unit_price_minor")
+  quantity          Int           @default(1) @db.SmallInt
+  pricingUnit       PricingUnit   @map("pricing_unit")
+  subtotalMinor     BigInt        @map("subtotal_minor")
+  startTime         DateTime?     @map("start_time") @db.Time(0)
+  endTime           DateTime?     @map("end_time") @db.Time(0)
+  notes             String?
+  position          Int           @db.SmallInt
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  planDay         PlanDay          @relation(fields: [planDayId], references: [id], onDelete: Cascade)
+  hotel           Hotel?           @relation(fields: [hotelId], references: [id], onDelete: Restrict)
+  activity        Activity?        @relation(fields: [activityId], references: [id], onDelete: Restrict)
+  transportOption TransportOption? @relation(fields: [transportOptionId], references: [id], onDelete: Restrict)
+
+  @@index([planDayId])
+  @@index([hotelId])
+  @@index([activityId])
+  @@index([transportOptionId])
+  @@map("plan_items")
+}
+
+model AiJob {
+  id            String      @id @default(uuid()) @db.Uuid
+  tripRequestId String      @map("trip_request_id") @db.Uuid
+  status        AiJobStatus @default(QUEUED)
+  attempts      Int         @default(0) @db.SmallInt
+  model         String?     @db.VarChar(80)
+  latencyMs     Int?        @map("latency_ms")
+  tokensIn      Int?        @map("tokens_in")
+  tokensOut     Int?        @map("tokens_out")
+  errorCode     String?     @map("error_code") @db.VarChar(64)
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  startedAt     DateTime?   @map("started_at") @db.Timestamptz(6)
+  finishedAt    DateTime?   @map("finished_at") @db.Timestamptz(6)
+
+  tripRequest TripRequest @relation(fields: [tripRequestId], references: [id], onDelete: Cascade)
+
+  @@index([tripRequestId, status])
+  @@map("ai_jobs")
+}

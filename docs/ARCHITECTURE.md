@@ -1,7 +1,8 @@
 # Arquitectura — TuriViajes
 
-Documento de referencia para implementar. Complementa [`../README.md`](../README.md) y
-[`DOMAIN.md`](DOMAIN.md). Si algo aquí no coincide con el código, se corrige el documento.
+Documento de referencia para implementar. Complementa [`../README.md`](../README.md),
+[`DOMAIN.md`](DOMAIN.md), [`BACKEND.md`](BACKEND.md) (mapa real del backend) y [`AI.md`](AI.md)
+(configuración de Gemini y grounding). Si algo aquí no coincide con el código, se corrige el documento.
 
 ## 1. Principios
 
@@ -66,7 +67,7 @@ requestId → helmet → cors → json(100kb) → rateLimit → auth(JWT) → zo
 
 - Un controller **solo** traduce HTTP ↔ caso de uso (sin reglas de negocio).
 - Los errores de dominio se mapean a códigos HTTP en un único `errorHandler`.
-- `GET /health` (liveness) y `GET /health/ready` (DB + IA) sin auth.
+- `GET /health` (liveness) y `GET /health/ready` (DB; IA cuando exista el adaptador) sin auth.
 
 ### Modelo de errores
 
@@ -133,8 +134,9 @@ Reglas:
 ### Autenticación
 
 - `argon2id` para contraseñas (mín. 12 caracteres). Nunca `md5/sha1`.
-- Access JWT (15 min, `sub`, `role`, `jti`) en memoria; refresh opaco rotativo (7 días) en cookie
-  `HttpOnly; Secure; SameSite=Strict`, guardado como hash con `familyId` para detectar reuso.
+- Access JWT (15 min, `sub`, `role`, `iat`, `exp`) en memoria; refresh opaco rotativo (7 días) en
+  cookie `HttpOnly; SameSite=Strict; Path=/api/v1/auth` (`Secure` en producción), guardado como hash
+  SHA-256 con `familyId` para detectar reuso.
 - Reuso de refresh ⇒ revocar familia y forzar login.
 - `POST /auth/logout` revoca el refresh actual. Sin registro público: `ADMIN` crea asesores.
 
@@ -173,19 +175,28 @@ Validada con Zod al arrancar; si falta una variable requerida, el proceso no ini
 
 | Variable | Requerida | Ejemplo / nota |
 |---|---|---|
-| `NODE_ENV` | sí | `development` \| `test` \| `production` |
+| `NODE_ENV` | no | `development` \| `test` \| `production` |
 | `PORT` | no | `3000` |
-| `CORS_ORIGINS` | sí | `http://localhost:5173` (lista separada por comas) |
+| `CORS_ORIGINS` | no | `http://localhost:5173` (lista separada por comas) |
+| `TRUST_PROXY` | no | `false`; `true` solo detrás de proxy de confianza |
 | `DATABASE_URL` | sí | pooler Supabase `:6543?pgbouncer=true` |
-| `DIRECT_URL` | sí | `:5432`, solo migraciones |
+| `DIRECT_URL` | sí | `:5432`, solo migraciones/seed |
 | `JWT_ACCESS_SECRET` | sí | ≥ 32 bytes aleatorios |
-| `ACCESS_TOKEN_TTL` | no | `15m` |
+| `ACCESS_TOKEN_TTL_SECONDS` | no | `900` (15 min) |
 | `REFRESH_TOKEN_TTL_DAYS` | no | `7` |
-| `AI_PROVIDER` | sí | `gemini` \| `mock` |
+| `COOKIE_DOMAIN` | no | vacío; solo si SPA y API comparten dominio padre |
+| `AI_PROVIDER` | no | `mock` (default) \| `gemini` |
 | `GEMINI_API_KEY` | si `gemini` | nunca en el repo |
 | `GEMINI_MODEL` | no | `gemini-2.5-flash` |
 | `AI_TIMEOUT_MS` | no | `45000` |
 | `LOG_LEVEL` | no | `info` |
+| `RATE_LIMIT_ENABLED` | no | `true`; `false` solo en tests |
+| `ADMIN_NAME` | no | `Administrador` (seed) |
+| `ADMIN_EMAIL` | si seed | email del admin |
+| `ADMIN_PASSWORD` | si seed | mínimo 12 caracteres |
+
+El backend carga **`backend/.env`** (no el `.env` de la raíz). `.env.example` documenta todos los
+campos; nunca se commitea un `.env` real.
 
 ## 10. Testing
 
