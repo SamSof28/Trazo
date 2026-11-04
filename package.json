@@ -5,16 +5,18 @@
   "type": "module",
   "workspaces": [
     "backend",
-    "packages/*"
+    "packages/*",
+    "frontend"
   ],
   "scripts": {
     "dev": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "npm run build -w @trazo/shared && npm run typecheck --workspaces --if-present",
     "test": "npm run build -w @trazo/shared && npm run test --workspaces --if-present",
-    "build": "npm run build -w @trazo/shared && npm run build -w backend",
+    "build": "npm run build -w @trazo/shared && npm run build -w backend && npm run build -w frontend",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build",
     "db:migrate": "npm run db:migrate -w backend",
     "db:deploy": "npm run db:deploy -w backend",

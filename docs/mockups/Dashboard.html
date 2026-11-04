@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Trazo — Dashboard de planes</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+*{box-sizing:border-box;margin:0}
+body{background:#F2F5F1;font-family:'DM Sans',sans-serif;color:#10262A}
+.t{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
+.chip{font:500 14px 'DM Sans',sans-serif;color:#10262A;background:#fff;border:1.5px solid #D5DDD6;border-radius:999px;padding:8px 16px;cursor:pointer;transition:transform .2s,background .2s}
+.chip:hover{background:#E3F3EE}
+.chip.active{background:#10262A;color:#fff;border-color:#10262A}
+.go{font:700 15px 'DM Sans',sans-serif;color:#fff;background:#FF6B3D;border:0;border-radius:999px;min-height:46px;padding:0 24px;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.go:hover{transform:translateY(-2px);box-shadow:0 7px 0 #10262A}
+.out{font:500 14px 'DM Sans',sans-serif;color:#10262A;background:transparent;border:1.5px solid #D5DDD6;border-radius:999px;min-height:38px;padding:0 16px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.out:hover{background:#E3F3EE}
+.badge{font:700 11px 'DM Sans',sans-serif;border-radius:999px;padding:5px 10px;text-transform:uppercase;letter-spacing:.04em}
+.card{background:#fff;border-radius:24px;overflow:hidden;border:1px solid #E3EAE4;transition:box-shadow .2s,transform .2s;cursor:pointer}
+.card:hover{transform:translateY(-4px);box-shadow:0 20px 40px -20px #10262A22}
+.nav-link{font:500 15px 'DM Sans',sans-serif;color:#3F575B;text-decoration:none;padding:8px 14px;border-radius:999px;transition:background .2s}
+.nav-link:hover,.nav-link.active{background:#E3F3EE;color:#10262A;font-weight:700}
+.go:focus-visible,.out:focus-visible,.chip:focus-visible,.card:focus-visible,.nav-link:focus-visible{outline:3px solid #FF6B3D;outline-offset:3px}
+.fld{min-height:44px;border:1.5px solid #D5DDD6;border-radius:999px;padding:0 18px;font:400 15px 'DM Sans',sans-serif;color:#10262A;background:#fff;width:100%}
+.fld:focus-visible{outline:3px solid #FF6B3D;outline-offset:2px;border-color:#10262A}
+@media(max-width:900px){.grid{grid-template-columns:1fr!important}}
+</style>
+</head>
+<body>
+
+<!-- ===== NAV BAR ===== -->
+<nav style="background:#fff;border-bottom:1px solid #E3EAE4;padding:0 32px;display:flex;align-items:center;gap:16px;min-height:64px;position:sticky;top:0;z-index:50">
+  <span class="t" style="display:flex;align-items:center;gap:8px;font-size:20px;font-weight:800;margin-right:16px">
+    <svg width="28" height="28" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="17" fill="#10262A"/><path d="M7 24C12 8 20 28 27 10" stroke="#FF6B3D" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 6"/><circle cx="27" cy="10" r="3" fill="#9ADBCB"/></svg>
+    trazo
+  </span>
+  <a class="nav-link active" href="#">Mis planes</a>
+  <a class="nav-link" href="#">Catálogo</a>
+  <span style="flex:1"></span>
+  <button class="go" type="button" style="min-height:40px;padding:0 20px;font-size:14px">+ Nuevo viaje</button>
+  <div style="display:flex;align-items:center;gap:10px;margin-left:12px">
+    <div style="width:36px;height:36px;border-radius:50%;background:#9ADBCB;display:grid;place-items:center;font-weight:700;font-size:14px">MG</div>
+    <div style="font-size:14px"><b>María Gómez</b><br><span style="font-size:12px;color:#3F575B">Asesora</span></div>
+  </div>
+</nav>
+
+<!-- ===== CONTENIDO ===== -->
+<div style="max-width:1200px;margin:0 auto;padding:28px 32px">
+
+  <h1 class="t" style="font-size:36px;font-weight:800;margin-bottom:24px">Mis planes</h1>
+
+  <!-- Filtros -->
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:24px">
+    <div style="flex:1;min-width:200px;max-width:360px">
+      <input class="fld" type="search" placeholder="Buscar por título o destino…">
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="chip active" type="button">Todos</button>
+      <button class="chip" type="button">Borrador</button>
+      <button class="chip" type="button">Guardado</button>
+      <button class="chip" type="button">Publicado</button>
+      <button class="chip" type="button">Archivado</button>
+    </div>
+  </div>
+
+  <!-- Grid de planes -->
+  <div class="grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+
+    <!-- Plan 1 -->
+    <div class="card" tabindex="0">
+      <div style="height:140px;background:linear-gradient(135deg,#CFEAE3,#9ADBCB);position:relative">
+        <span class="badge" style="position:absolute;top:12px;left:12px;background:#FFD36B;color:#10262A">Borrador</span>
+      </div>
+      <div style="padding:18px 20px">
+        <div style="font-weight:700;font-size:16px;margin-bottom:4px">Cartagena Esencial 5 días</div>
+        <div style="font-size:13px;color:#3F575B;margin-bottom:12px">Cartagena, Colombia · 10–14 dic 2026</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="t" style="font-size:20px;font-weight:800">COP 2.844.800</div>
+          <div style="display:flex;gap:4px">
+            <button class="out" style="min-height:32px;padding:0 12px;font-size:12px">Duplicar</button>
+            <button class="out" style="min-height:32px;padding:0 12px;font-size:12px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plan 2 -->
+    <div class="card" tabindex="0">
+      <div style="height:140px;background:linear-gradient(135deg,#FFD36B,#FF6B3D44);position:relative">
+        <span class="badge" style="position:absolute;top:12px;left:12px;background:#9ADBCB;color:#10262A">Publicado</span>
+      </div>
+      <div style="padding:18px 20px">
+        <div style="font-weight:700;font-size:16px;margin-bottom:4px">San Andrés Todo Incluido</div>
+        <div style="font-size:13px;color:#3F575B;margin-bottom:12px">San Andrés, Colombia · 20–26 ene 2027</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="t" style="font-size:20px;font-weight:800">COP 4.120.000</div>
+          <div style="display:flex;gap:4px">
+            <button class="out" style="min-height:32px;padding:0 12px;font-size:12px">Duplicar</button>
+            <button class="out" style="min-height:32px;padding:0 12px;font-size:12px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plan 3 -->
+    <div class="card" tabindex="0">
+      <div style="height:140px;background:linear-gradient(135deg,#E3F3EE,#CFEAE3);position:relative">
+        <span class="badge" style="position:absolute;top:12px;left:12px;background:#10262A;color:#fff">Guardado</span>
+      </div>
+      <div style="padding:18px 20px">
+        <div style="font-weight:700;font-size:16px;margin-bottom:4px">Eje Cafetero Aventura</div>
+        <div style="font-size:13px;color:#3F575B;margin-bottom:12px">Eje Cafetero, Colombia · 5–9 feb 2027</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="t" style="font-size:20px;font-weight:800">COP 3.250.000</div>
+          <div style="display:flex;gap:4px">
+            <button class="out" style="min-height:32px;padding:0 12px;font-size:12px">Duplicar</button>
+            <button class="out" style="min-height:32px;padding:0 12px;font-size:12px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plan 4 -->
+    <div class="card" tabindex="0">
+      <div style="height:140px;background:linear-gradient(135deg,#D5DDD6,#E3EAE4);position:relative">
+        <span class="badge" style="position:absolute;top:12px;left:12px;background:#D5DDD6;color:#3F575B">Archivado</span>
+      </div>
+      <div style="padding:18px 20px">
+        <div style="font-weight:700;font-size:16px;margin-bottom:4px;color:#3F575B">Medellín Cultural 3 días</div>
+        <div style="font-size:13px;color:#3F575B;margin-bottom:12px">Medellín, Colombia · 15–17 oct 2026</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="t" style="font-size:20px;font-weight:800;color:#3F575B">COP 1.780.000</div>
+          <div style="display:flex;gap:4px">
+            <button class="out" style="min-height:32px;padding:0 12px;font-size:12px">Duplicar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plan 5 -->
+    <div class="card" tabindex="0">
+      <div style="height:140px;background:linear-gradient(135deg,#9ADBCB44,#CFEAE3);position:relative">
+        <span class="badge" style="position:absolute;top:12px;left:12px;background:#FFD36B;color:#10262A">Borrador</span>
+      </div>
+      <div style="padding:18px 20px">
+        <div style="font-weight:700;font-size:16px;margin-bottom:4px">Santa Marta Playa y Tayrona</div>
+        <div style="font-size:13px;color:#3F575B;margin-bottom:12px">Santa Marta, Colombia · 1–6 mar 2027</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="t" style="font-size:20px;font-weight:800">COP 2.950.000</div>
+          <div style="display:flex;gap:4px">
+            <button class="out" style="min-height:32px;padding:0 12px;font-size:12px">Duplicar</button>
+            <button class="out" style="min-height:32px;padding:0 12px;font-size:12px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Paginación -->
+  <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin-top:32px">
+    <button class="chip" style="padding:6px 14px;font-size:13px" disabled>← Anterior</button>
+    <span style="font-size:14px;color:#3F575B">Página <b>1</b> de 3 · 14 planes</span>
+    <button class="chip" style="padding:6px 14px;font-size:13px">Siguiente →</button>
+  </div>
+
+</div>
+</body>
+</html>
