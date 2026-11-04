@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  addPlanItemSchema,
   answerTripRequestSchema,
   catalogIdParamsSchema,
   createActivitySchema,
@@ -11,13 +12,22 @@ import {
   listActivitiesQuerySchema,
   listDestinationsQuerySchema,
   listHotelsQuerySchema,
+  listPlansQuerySchema,
   listTransportQuerySchema,
   listTripRequestsQuerySchema,
   loginSchema,
+  movePlanItemSchema,
+  planAlternativesQuerySchema,
+  planIdParamsSchema,
+  planItemParamsSchema,
+  planReportQuerySchema,
+  replacePlanItemSchema,
   tripRequestIdParamsSchema,
   updateActivitySchema,
   updateDestinationSchema,
   updateHotelSchema,
+  updatePlanItemSchema,
+  updatePlanSchema,
   updateTransportOptionSchema,
 } from '@turiviaje/shared';
 import type { AccessTokenService } from '../../domain/identity/ports.js';
@@ -25,12 +35,18 @@ import type { ActivityController } from './activity.controller.js';
 import type { AuthController } from './auth.controller.js';
 import type { DestinationController } from './destination.controller.js';
 import type { HotelController } from './hotel.controller.js';
+import type { PlanController } from './plan.controller.js';
 import type { TransportController } from './transport.controller.js';
 import type { TripRequestController } from './trip-request.controller.js';
 import type { UserController } from './user.controller.js';
 import { requireAuth, requireRole } from './middleware/auth.js';
 import { validateBody, validateParams, validateQuery } from './middleware/validate.js';
-import { loginLimiter, refreshLimiter, tripRequestLimiter } from './rate-limit.js';
+import {
+  generationLimiter,
+  loginLimiter,
+  refreshLimiter,
+  tripRequestLimiter,
+} from './rate-limit.js';
 
 export interface ApiRouterDependencies {
   authController: AuthController;
@@ -40,6 +56,7 @@ export interface ApiRouterDependencies {
   activityController: ActivityController;
   transportController: TransportController;
   tripRequestController: TripRequestController;
+  planController: PlanController;
   accessTokens: AccessTokenService;
 }
 
@@ -202,6 +219,111 @@ export function createApiRouter(deps: ApiRouterDependencies): Router {
     validateParams(tripRequestIdParamsSchema),
     validateBody(answerTripRequestSchema),
     deps.tripRequestController.answer,
+  );
+  router.post(
+    '/trip-requests/:id/generate',
+    auth,
+    generationLimiter,
+    validateParams(tripRequestIdParamsSchema),
+    deps.tripRequestController.generate,
+  );
+
+  router.get(
+    '/plans',
+    auth,
+    validateQuery(listPlansQuerySchema),
+    deps.planController.list,
+  );
+  router.get(
+    '/plans/:id',
+    auth,
+    validateParams(planIdParamsSchema),
+    deps.planController.get,
+  );
+  router.patch(
+    '/plans/:id',
+    auth,
+    validateParams(planIdParamsSchema),
+    validateBody(updatePlanSchema),
+    deps.planController.update,
+  );
+  router.get(
+    '/plans/:id/alternatives',
+    auth,
+    validateParams(planIdParamsSchema),
+    validateQuery(planAlternativesQuerySchema),
+    deps.planController.alternatives,
+  );
+  router.post(
+    '/plans/:id/items',
+    auth,
+    validateParams(planIdParamsSchema),
+    validateBody(addPlanItemSchema),
+    deps.planController.addItem,
+  );
+  router.patch(
+    '/plans/:id/items/:itemId',
+    auth,
+    validateParams(planItemParamsSchema),
+    validateBody(replacePlanItemSchema),
+    deps.planController.replaceItem,
+  );
+  router.patch(
+    '/plans/:id/items/:itemId/details',
+    auth,
+    validateParams(planItemParamsSchema),
+    validateBody(updatePlanItemSchema),
+    deps.planController.updateItem,
+  );
+  router.patch(
+    '/plans/:id/items/:itemId/position',
+    auth,
+    validateParams(planItemParamsSchema),
+    validateBody(movePlanItemSchema),
+    deps.planController.moveItem,
+  );
+  router.delete(
+    '/plans/:id/items/:itemId',
+    auth,
+    validateParams(planItemParamsSchema),
+    deps.planController.removeItem,
+  );
+  router.post(
+    '/plans/:id/save',
+    auth,
+    validateParams(planIdParamsSchema),
+    deps.planController.save,
+  );
+  router.post(
+    '/plans/:id/publish',
+    auth,
+    validateParams(planIdParamsSchema),
+    deps.planController.publish,
+  );
+  router.post(
+    '/plans/:id/archive',
+    auth,
+    validateParams(planIdParamsSchema),
+    deps.planController.archive,
+  );
+  router.post(
+    '/plans/:id/duplicate',
+    auth,
+    validateParams(planIdParamsSchema),
+    deps.planController.duplicate,
+  );
+  router.get(
+    '/plans/:id/report',
+    auth,
+    validateParams(planIdParamsSchema),
+    validateQuery(planReportQuerySchema),
+    deps.planController.report,
+  );
+  router.get(
+    '/plans/:id/pdf',
+    auth,
+    validateParams(planIdParamsSchema),
+    deps.planController.pdf,
   );
 
   return router;

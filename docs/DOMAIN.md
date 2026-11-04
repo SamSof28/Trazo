@@ -111,7 +111,13 @@ actualiza el CHECK para permitir `NULL`. `children` sigue con default `0`.
 
 Estados de `TripRequest`: `create` nace en `AWAITING_INPUT` si falta algún slot requerido y en `READY`
 si están todos; `withAnswers` permite refinar incluso un `READY` y recalcula `missing_fields`.
-`COLLECTING`, `GENERATING`, `GENERATED` y `FAILED` quedan para la generación asíncrona de la Fase 4.
+`GENERATING` se fija al encolar el job, `GENERATED` al crear el plan (con `planId`) y `FAILED` cuando
+el job falla (con `error_code`). `FAILED` admite otro `POST /generate`. `COLLECTING` existe en el enum
+pero la creación no lo usa.
+
+`plan_id` **no** es una columna de `trip_requests`: se deriva de la relación 1:1 con `plans`
+(`plans.trip_request_id` es UNIQUE). El DTO lo expone como `planId` cuando el plan existe y no está
+borrado.
 
 Bandas de presupuesto por persona (COP, persistidas en unidades menores):
 
@@ -131,17 +137,17 @@ Bandas de presupuesto por persona (COP, persistidas en unidades menores):
 | `trip_request_id` | uuid UNIQUE FK | 1:1 con la solicitud origen |
 | `advisor_id` | uuid FK | copiado de la solicitud |
 | `destination_id` | uuid FK | destino principal |
-| `title` | text | requerido para publicar (3–120) |
-| `status` | enum | `DRAFT`\|`SAVED`\|`PUBLISHED`\|`ARCHIVED`; `SAVED` se agrega en Fase 6 |
+| `title` | text | requerido para publicar (2–120) |
+| `status` | enum | `DRAFT`\|`SAVED`\|`PUBLISHED`\|`ARCHIVED`; `SAVED` es editable |
 | `summary` | text | resumen ejecutivo generado/editable |
 | `hero_image_url` | text | |
 | `tags` | text[] | intereses detectados |
 | `currency` | char(3) | una sola por plan |
 | `subtotal_minor` | bigint | suma de ítems |
-| `margin_percent` | numeric(5,2) | 0–100 (el CHECK actual es 0–50; se amplía en Fase 5) |
+| `margin_percent` | numeric(5,2) | 0–100 (CHECK ampliado en la migración `0004`) |
 | `margin_minor` | bigint | calculado |
 | `total_minor` | bigint | `subtotal + margin` |
-| `version` | integer | incrementa al duplicar |
+| `version` | integer | incrementa en cada mutación y al duplicar (`source.version + 1`) |
 | `published_at` | timestamptz | nullable |
 | `deleted_at` | timestamptz | soft delete |
 
@@ -150,14 +156,15 @@ Bandas de presupuesto por persona (COP, persistidas en unidades menores):
 
 **plan_items**: `id`, `plan_day_id` FK CASCADE, `type enum(ACCOMMODATION|ACTIVITY|TRANSPORT)`,
 `hotel_id` / `activity_id` / `transport_option_id` (nullable FKs), `name_snapshot text`,
-`unit_price_minor bigint`, `quantity smallint`, `pricing_unit`, `subtotal_minor bigint`,
-`start_time time`, `end_time time`, `notes`, `position smallint`.
+`image_url text` (snapshot de la imagen), `unit_price_minor bigint`, `quantity smallint`,
+`pricing_unit`, `subtotal_minor bigint`, `start_time time`, `end_time time`, `notes`,
+`position smallint`.
 
 CHECK: exactamente una FK de catálogo no nula y coherente con `type`.
 
 **ai_jobs**: `id`, `trip_request_id` FK, `status enum(QUEUED|RUNNING|SUCCEEDED|FAILED)`,
 `attempts smallint`, `model`, `latency_ms`, `tokens_in`, `tokens_out`, `error_code`, `started_at`,
-`finished_at`.
+`finished_at`. Se crea en `QUEUED` al llamar a `/generate` y lo procesa el runner in-process.
 
 ## 3. Diagrama entidad-relación
 
@@ -198,7 +205,7 @@ erDiagram
 | INV-14 | `fromPrice` es derivado (hotel activo más económico en COP); nunca se persiste. |
 | INV-15 | `transport_options.pricing_unit` es compatible con `mode`; origen y destino son distintos. |
 | INV-16 | Desactivar catálogo es soft delete; nunca se borran filas referenciadas por `plan_items`. |
-| INV-17 | Un ítem solo entra al plan si está disponible para las fechas; la validación es server-side y no se sobrevende. |
+| INV-17 | Cuando exista el modelo de disponibilidad (2.5), un ítem solo entra al plan si está disponible para las fechas; la validación será server-side y no se sobrevenderá. Hoy el shortlist filtra por `is_active` y moneda. |
 | INV-18 | `day.subtotal` es la suma de sus ítems y `plan.subtotal` la suma de los días; el cliente nunca envía totales. |
 | INV-19 | `margin_percent` está entre 0 y 100; `margin` y `total` se recalculan en el servidor. |
 | INV-20 | `SAVED` es editable; `PUBLISHED` es inmutable y se duplica para editar. |
@@ -219,7 +226,8 @@ plan.total      = plan.subtotal + plan.margin
   `subtotal = precio_noche × noches`. Por eso el `subtotal` de ese día incluye toda la estadía; la UI
   lo muestra como tarjeta que abarca los días. No crear un ítem de hotel por noche.
 - El margen de agencia se aplica **una vez** al total, nunca por ítem (evita acumulación de redondeo).
-- `marginPercent` se congela en el plan al crearlo; cambiarlo es una acción explícita de `ADMIN`.
+- `marginPercent` se congela en el plan al crearlo; cambiarlo es una acción explícita del asesor dueño
+  (o de un `ADMIN`) mediante `PATCH /plans/:id`.
 - Recalcular es una operación de servidor; el cliente nunca envía totales.
 
 ## 6. Intake: slots y preguntas
@@ -254,14 +262,25 @@ Reglas:
 - Un valor inválido responde `422` con `errors[].field`; un destino fuera del catálogo no se acepta.
 - Se puede refinar un `TripRequest` en `READY`; `withAnswers` recalcula `missingFields` y el estado.
 - `COLLECTING` existe en el enum pero la creación usa `AWAITING_INPUT` o `READY`; la generación
-  asíncrona (Fase 4) usará `GENERATING|GENERATED|FAILED`.
+  asíncrona usa `GENERATING|GENERATED|FAILED`.
 - El clima (HU 2.6) y la disponibilidad (HU 3.3–3.4) son datos de apoyo: no cambian los slots ni los
   precios por sí solos.
 
 ## 7. Alternativas
 
 - Solo del mismo `type`, mismo `destination_id` y misma moneda; se excluye el ítem actual.
-- Se ordenan por cercanía al precio actual y se devuelven 3.
-- Al elegir: se actualiza la FK, el snapshot de nombre/precio, `quantity` si aplica, y se recalcula el
-  plan completo dentro de una transacción corta.
-- El plan debe estar `DRAFT` o `SAVED`; si está `PUBLISHED` o `ARCHIVED`, responder `409 CONFLICT`.
+- Se ordenan por precio ascendente y se devuelven máximo 3.
+- Al elegir: se actualiza la FK, el snapshot de nombre/imagen/precio, `quantity` si aplica, y se
+  recalcula el plan completo.
+- El plan debe estar `DRAFT` o `SAVED`; si está `PUBLISHED` o `ARCHIVED`, responde `409 CONFLICT`
+  (`PLAN_NOT_EDITABLE`).
+
+## 8. Generación y duplicado
+
+- La generación se ejecuta sobre una `TripRequest` `READY` (o `FAILED` para reintentar). El plan nace
+  `DRAFT` con `marginPercent = 0`; el asesor lo ajusta después.
+- El plan guarda `tripRequestId`; una solicitud tiene como máximo un plan. Por eso duplicar crea una
+  **nueva** `TripRequest` copia (mismo `advisorId` y slots) y un nuevo `Plan DRAFT` con título
+  `"(copia)"` y `version = source.version + 1`.
+- Los ítems del plan duplicado reciben IDs nuevos; nombre, imagen y precio se copian del snapshot del
+  plan origen, no del catálogo actual.

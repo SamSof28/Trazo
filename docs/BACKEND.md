@@ -1,12 +1,14 @@
 # Backend — mapa de implementación y conexión
 
-> **Estado:** Fase 0 y los backends de Fase 1 (identidad), Fase 2 (catálogo) y Fase 3 (intake
-> conversacional) están completos. El frontend (rebanadas 1.4, 2.4 y 3.3–3.4) y los módulos de
-> generación, edición y publicación todavía no existen. Este documento describe lo que **ya está
-> implementado** y el patrón exacto para agregar lo que sigue.
+> **Estado:** Fase 0 y los backends de Fase 1 (identidad), Fase 2 (catálogo), Fase 3 (intake
+> conversacional), Fase 4 (generación con IA anclada al catálogo), Fase 5 (edición y presupuesto),
+> Fase 6 (guardado, publicación y dashboard API) y Fase 7 (reportes JSON/CSV y PDF) están completos.
+> El frontend, la disponibilidad de catálogo (HU 3.3–3.4) y el clima (HU 2.6) siguen pendientes. Este
+> documento describe lo que **ya está implementado** y el patrón exacto para agregar lo que sigue.
 
 Documentos relacionados: [`API.md`](API.md) (contrato REST), [`ARCHITECTURE.md`](ARCHITECTURE.md)
-(capas y seguridad), [`DOMAIN.md`](DOMAIN.md) (modelo de datos), [`AI.md`](AI.md) (Gemini y grounding).
+(capas y seguridad), [`DOMAIN.md`](DOMAIN.md) (modelo de datos), [`AI.md`](AI.md) (Gemini y grounding)
+y [`DEPLOYMENT.md`](DEPLOYMENT.md) (Supabase + Vercel).
 
 ---
 
@@ -83,8 +85,9 @@ curl -i http://localhost:3000/health/ready
    ```
 
    `db:deploy` ejecuta `prisma migrate deploy` contra `DIRECT_URL` y aplica, en orden,
-   `0001_init`, `0002_catalog_search` y `0003_trip_request_adults_nullable`. No uses
-   `db:migrate` contra Supabase: crea una *shadow database* y falla en planes gratuitos.
+   `0001_init`, `0002_catalog_search`, `0003_trip_request_adults_nullable` y
+   `0004_plan_saved_margin_image`. No uses `db:migrate` contra Supabase: crea una *shadow database* y
+   falla en planes gratuitos.
 6. **Sembrar admin y catálogo.**
 
    ```bash
@@ -101,8 +104,9 @@ curl -i http://localhost:3000/health/ready
    ```
 
    Debe responder `200 { "status": "ready" }`. En Supabase, *Table Editor* debe mostrar `users`,
-   `destinations`, `hotels`, `activities`, `transport_options` y `trip_requests`; en *SQL Editor*,
-   `select count(*) from destinations;` debe devolver al menos 5.
+   `destinations`, `hotels`, `activities`, `transport_options`, `trip_requests`, `plans`, `plan_days`,
+   `plan_items` y `ai_jobs`; en *SQL Editor*, `select count(*) from destinations;` debe devolver al
+   menos 5.
 8. **Probar el login.** Usa el `ADMIN_EMAIL`/`ADMIN_PASSWORD` del seed contra
    `POST /api/v1/auth/login`. Si responde `401`, revisa que el seed haya corrido y que el hash esté
    en `users.password_hash`.
@@ -160,6 +164,7 @@ backend/
     migrations/0001_init/         # migración inicial + CHECK constraints
     migrations/0002_catalog_search/ # pg_trgm + índices GIN del catálogo
     migrations/0003_trip_request_adults_nullable/ # adults nullable + CHECK de intake
+    migrations/0004_plan_saved_margin_image/ # SAVED, margen 0–100 e image_url del ítem
     seed.ts                       # admin + catálogo de Colombia idempotente
   src/
     domain/
@@ -176,6 +181,12 @@ backend/
       intake/
         trip-request.ts           # agregado TripRequest, slots, missingFields y transiciones
         ports.ts                  # TripRequestRepository y criterios de búsqueda
+      planning/
+        plan.ts                   # agregado Plan, días, ítems, presupuesto y ciclo de vida
+        ports.ts                  # PlanRepository y criterios de búsqueda
+      ai/
+        job.ts                    # agregado AiJob (QUEUED/RUNNING/SUCCEEDED/FAILED)
+        ports.ts                  # AiPlannerPort, AiJobRepository y PlanGenerationRunner
       shared/
         app-error.ts              # errores de dominio → HTTP
         clock.ts                  # puerto Clock
@@ -203,6 +214,25 @@ backend/
         ownership.ts              # ADVISOR solo ve lo suyo; ADMIN ve todo
         presenter.ts              # TripRequest → DTO compartido
         views.ts
+      ai/
+        prompt-builder.ts         # system prompt + user delimitado + reparación
+        plan-output.schema.ts     # Zod estricto de la salida del modelo
+        plan-output.ts            # parseo, grounding de IDs y coherencia
+      planning/
+        start-generation.use-case.ts
+        run-generation-job.use-case.ts # shortlist → IA → validación → recálculo → Plan
+        plan-factory.ts           # salida validada + catálogo → Plan DRAFT
+        shortlist.ts              # hoteles, actividades y transporte del destino
+        access.ts                 # ownership de planes
+        get-plan.use-case.ts
+        list-plans.use-case.ts
+        update-plan.use-case.ts
+        plan-items.use-cases.ts   # add/replace/update/move/remove
+        plan-lifecycle.use-cases.ts # save/publish/archive/duplicate
+        plan-alternatives.use-case.ts
+        plan-report.use-case.ts
+        presenter.ts              # Plan → DTO, reporte y CSV
+        views.ts
     infrastructure/
       persistence/prisma/
         client.ts
@@ -214,6 +244,14 @@ backend/
         activity.repository.ts
         transport-option.repository.ts
         trip-request.repository.ts
+        plan.repository.ts
+        ai-job.repository.ts
+      ai/
+        gemini-planner.ts         # REST de Gemini con timeout y retry 429/5xx
+        mock-planner.ts           # determinista para tests y demo
+        in-process-generation-runner.ts
+      pdf/
+        plan-pdf.ts               # PDF sin dependencias externas
       security/
         argon2-password-hasher.ts
         jwt-access-token.service.ts
@@ -228,6 +266,8 @@ backend/
       activity.controller.ts
       transport.controller.ts
       trip-request.controller.ts
+      plan.controller.ts
+      actor.ts                    # actor autenticado desde req.auth
       cookies.ts                  # cookie HttpOnly del refresh
       middleware/
         auth.ts                   # requireAuth + requireRole
@@ -244,6 +284,7 @@ backend/
     fakes.ts                      # puertos de identidad en memoria
     catalog-fakes.ts              # repositorios de catálogo en memoria
     intake-fakes.ts               # repositorio de trip requests en memoria
+    planning-fakes.ts             # planes, ai_jobs y runner diferido en memoria
     user.test.ts
     login.use-case.test.ts
     refresh.use-case.test.ts
@@ -252,6 +293,11 @@ backend/
     intake.domain.test.ts         # invariantes y transiciones de TripRequest
     prompt-parser.test.ts         # extracción determinista de slots y respuestas
     intake.http.test.ts           # Supertest: create/get/list/answers + ownership
+    planning.domain.test.ts       # presupuesto, edición y ciclo de vida del Plan
+    ai-output.test.ts             # Zod, grounding de IDs y coherencia de días
+    gemini-planner.test.ts        # contrato REST, retry, timeout y JSON inválido
+    planning.http.test.ts         # Supertest: generate/planes/ítems/reportes/PDF
+    plan-pdf.test.ts              # PDF mínimo válido y escape de texto
     auth.http.test.ts
     test-app.ts
 ```
@@ -324,13 +370,28 @@ Router montado en `/api/v1` (`backend/src/interfaces/http/routes.ts`).
 | `POST` | `/trip-requests` | `Bearer` (20/h/usuario) | `TripRequestController.create` | `CreateTripRequestUseCase` | ✅ |
 | `GET` | `/trip-requests/:id` | `Bearer` | `TripRequestController.get` | `GetTripRequestUseCase` | ✅ |
 | `POST` | `/trip-requests/:id/answers` | `Bearer` | `TripRequestController.answer` | `AnswerTripRequestUseCase` | ✅ |
+| `POST` | `/trip-requests/:id/generate` | `Bearer` (10/h/usuario) | `TripRequestController.generate` | `StartGenerationUseCase` + runner | ✅ |
+| `GET` | `/plans` | `Bearer` | `PlanController.list` | `ListPlansUseCase` | ✅ |
+| `GET` | `/plans/:id` | `Bearer` | `PlanController.get` | `GetPlanUseCase` | ✅ |
+| `PATCH` | `/plans/:id` | `Bearer` | `PlanController.update` | `UpdatePlanUseCase` | ✅ |
+| `GET` | `/plans/:id/alternatives` | `Bearer` | `PlanController.alternatives` | `ListPlanAlternativesUseCase` | ✅ |
+| `POST` | `/plans/:id/items` | `Bearer` | `PlanController.addItem` | `AddPlanItemUseCase` | ✅ |
+| `PATCH` | `/plans/:id/items/:itemId` | `Bearer` | `PlanController.replaceItem` | `ReplacePlanItemUseCase` | ✅ |
+| `PATCH` | `/plans/:id/items/:itemId/details` | `Bearer` | `PlanController.updateItem` | `UpdatePlanItemUseCase` | ✅ |
+| `PATCH` | `/plans/:id/items/:itemId/position` | `Bearer` | `PlanController.moveItem` | `MovePlanItemUseCase` | ✅ |
+| `DELETE` | `/plans/:id/items/:itemId` | `Bearer` | `PlanController.removeItem` | `RemovePlanItemUseCase` | ✅ |
+| `POST` | `/plans/:id/save` | `Bearer` | `PlanController.save` | `SavePlanUseCase` | ✅ |
+| `POST` | `/plans/:id/publish` | `Bearer` | `PlanController.publish` | `PublishPlanUseCase` | ✅ |
+| `POST` | `/plans/:id/archive` | `Bearer` | `PlanController.archive` | `ArchivePlanUseCase` | ✅ |
+| `POST` | `/plans/:id/duplicate` | `Bearer` | `PlanController.duplicate` | `DuplicatePlanUseCase` | ✅ |
+| `GET` | `/plans/:id/report` | `Bearer` | `PlanController.report` | `GetPlanReportUseCase` | ✅ |
+| `GET` | `/plans/:id/pdf` | `Bearer` | `PlanController.pdf` | `GetPlanReportUseCase` | ✅ |
 | `GET` | `/health` | público | — | — | ✅ |
 | `GET` | `/health/ready` | público | — | — | ✅ |
 | `PATCH` | `/users/:id` | `ADMIN` | — | — | ⏳ pendiente |
 
-Los endpoints de `plans` y `POST /trip-requests/:id/generate` están especificados en
-[`API.md`](API.md), pero corresponden a la Fase 4 y **aún no están implementados**. No los consumas
-todavía.
+El contrato completo de planes, ítems, ciclo de vida y reportes está en
+[`API.md` §5](API.md#5-planes-implementado--fases-46).
 
 ### 4.1 `POST /api/v1/auth/login`
 
@@ -536,7 +597,9 @@ POST /api/v1/trip-requests/9f1c.../answers
 - Un destino fuera del catálogo (p. ej. "París") responde `422` con `errors[].field = "destination"`.
 - `GET /trip-requests/:id` devuelve el estado actual; `GET /trip-requests?status=READY` lista.
 - `POST /trip-requests` tiene rate limit de 20/h/usuario.
-- `POST /trip-requests/:id/generate` **todavía no existe**: es la Fase 4.
+- `POST /trip-requests/:id/generate` responde `202`, marca la solicitud `GENERATING` y ejecuta el job
+  in-process. El cliente hace polling del detalle hasta `GENERATED` (con `planId`) o `FAILED` (con
+  `errorCode`). Ver [`API.md` §4.4](API.md#44-generación-asíncrona).
 
 ---
 
@@ -725,11 +788,57 @@ export async function answerTripRequest(
 
 - Renderiza `questions` tal cual llegan; máximo 2 por turno. Los chips son sugerencias, pero el
   usuario puede escribir texto libre.
-- Si `status === 'READY'` y `questions` está vacío, habilita "Generar plan" (cuando exista la Fase 4).
+- Si `status === 'READY'` y `questions` está vacío, habilita "Generar plan" y llama a
+  `POST /trip-requests/:id/generate`.
 - Un `422` de destino trae `errors[0].field === 'destination'`; muéstralo como error del chip/entrada.
 - Guarda el historial de mensajes en Zustand, pero el estado de verdad (`status`, `slots`,
   `missingFields`) siempre viene del servidor.
-- No inventes un plan ni precargues precios: la generación es la Fase 4 y aún no existe.
+- No inventes un plan ni precargues precios: el plan siempre sale de `GET /plans/:id`.
+
+### 5.3 Consumo de la generación y del plan
+
+```ts
+// frontend/src/features/workspace/plan-api.ts
+import type {
+  PlanDto,
+  PlanGenerationAccepted,
+  PlanResponse,
+  TripRequestDto,
+} from '@turiviaje/shared';
+import { apiFetch } from '../../shared/api/client';
+
+export async function generatePlan(tripRequestId: string): Promise<PlanGenerationAccepted> {
+  const response = await apiFetch(`/api/v1/trip-requests/${tripRequestId}/generate`, {
+    method: 'POST',
+  });
+  if (!response.ok) throw await response.json();
+  return (await response.json()) as PlanGenerationAccepted;
+}
+
+export async function fetchPlan(planId: string): Promise<PlanDto> {
+  const response = await apiFetch(`/api/v1/plans/${planId}`);
+  if (!response.ok) throw await response.json();
+  return ((await response.json()) as PlanResponse).plan;
+}
+
+export async function fetchTripRequest(id: string): Promise<TripRequestDto> {
+  const response = await apiFetch(`/api/v1/trip-requests/${id}`);
+  if (!response.ok) throw await response.json();
+  const data = (await response.json()) as { tripRequest: TripRequestDto };
+  return data.tripRequest;
+}
+```
+
+- Tras `generatePlan`, haz polling de `fetchTripRequest(id)` cada `pollAfterMs` (1.5 s). Muestra las
+  etapas de UI ("interpretando", "consultando catálogo", "armando itinerario") sin persistirlas.
+- Si el detalle pasa a `GENERATED`, navega a `planId`. Si pasa a `FAILED`, muestra `errorCode` y
+  ofrece reintentar con otro `POST /generate` (solo válido en `FAILED`).
+- Todas las mutaciones del plan devuelven `{ plan: PlanDto }` completo: reemplaza el estado local con
+  esa respuesta, sin recalcular precios ni subtotales.
+- `DRAFT` y `SAVED` se editan; `PUBLISHED` y `ARCHIVED` son de solo lectura. Para editar un publicado,
+  llama a `POST /plans/:id/duplicate` y trabaja sobre el nuevo `DRAFT`.
+- Para descargar el PDF usa `fetch` con `Authorization` y convierte la respuesta en `Blob`; el
+  endpoint no es público y no acepta la cookie de refresh como credencial.
 
 ### Códigos que debe manejar el frontend
 
@@ -780,8 +889,8 @@ Todos los errores usan `application/problem+json`:
 | Catálogo (escritura) | ❌ `403` | ✅ |
 | `trip-requests` propias | CRUD | CRUD |
 | `trip-requests` ajenas | ❌ `404` | ✅ |
-| `plans` propios (futuro) | CRUD + publicar | CRUD + publicar |
-| `plans` ajenos (futuro) | ❌ `404` | ✅ |
+| `plans` propios | CRUD + publicar | CRUD + publicar |
+| `plans` ajenos | ❌ `404` | ✅ |
 
 - El `advisorId` **nunca** se toma del body: sale de `req.auth.userId` (JWT verificado).
 - Un recurso ajeno responde `404`, no `403`, para no revelar su existencia.
@@ -851,12 +960,14 @@ npm run typecheck
 npm run build
 ```
 
-Estado actual: **88 tests de backend + 6 de `packages/shared`**, sin base de datos ni red (fakes).
+Estado actual: **124 tests de backend + 6 de `packages/shared`**, sin base de datos ni red (fakes).
 Los tests HTTP usan Supertest contra la app real con repositorios en memoria. El catálogo añade
 `catalog.domain.test.ts` (invariantes) y `catalog.http.test.ts` (lecturas, filtros, RBAC y CRUD). El
 intake añade `intake.domain.test.ts` (agregado y transiciones), `prompt-parser.test.ts` (extracción
 determinista con ≥ 10 prompts reales) e `intake.http.test.ts` (create/get/list/answers, ownership y
-validación).
+validación). La planificación añade `planning.domain.test.ts` (presupuesto, edición y ciclo de vida),
+`ai-output.test.ts` (Zod + grounding), `gemini-planner.test.ts` (contrato REST), `planning.http.test.ts`
+(generación, ítems, publicación, reportes y PDF) y `plan-pdf.test.ts`.
 
 Los tests de integración contra Postgres siguen pendientes de credenciales reales. El patrón será
 limpiar por transacción o truncado, nunca compartir estado entre tests.
@@ -868,17 +979,24 @@ limpiar por transacción o truncado, nunca compartir estado entre tests.
 | Elemento | Estado |
 |---|---|
 | Scaffold, env, logger, errores, health | ✅ |
-| Prisma schema + migraciones `0001_init`, `0002_catalog_search` y `0003_trip_request_adults_nullable` | ✅ (generadas, **no aplicadas** sin credenciales) |
+| Prisma schema + migraciones `0001_init`, `0002_catalog_search`, `0003_trip_request_adults_nullable` y `0004_plan_saved_margin_image` | ✅ (generadas, **no aplicadas** sin credenciales) |
 | Seed de admin + catálogo de Colombia | ✅ (código listo, **no ejecutado** sin credenciales) |
 | Login, refresh rotativo, logout, `/auth/me` | ✅ |
 | RBAC `ADMIN` + `POST /users` | ✅ |
 | Catálogo backend: destinos, hoteles, actividades y transporte | ✅ (lectura + CRUD `ADMIN`, soft delete) |
 | Intake backend: `TripRequest`, parser determinista, preguntas y respuestas | ✅ (Fase 3.1–3.2) |
+| Generación con IA (`mock` + Gemini REST), `ai_jobs` y runner in-process | ✅ (Fase 4) |
+| Planes: lectura, edición de metadatos/ítems, alternativas y presupuesto | ✅ (Fase 5) |
+| Ciclo de vida: `SAVED`, publicar, archivar, duplicar y dashboard API | ✅ (Fase 6) |
+| Reportes JSON/CSV y PDF | ✅ (Fase 7.1 y 7.5) |
 | Frontend `/login`, guard, refresh silencioso | ⏳ Fase 1.4 |
 | Frontend del catálogo (selector de destino) | ⏳ Fase 2.4 |
 | Disponibilidad de catálogo (modelo + explorador) | ⏳ Fase 2.5 |
 | Frontend del intake (landing + chat) | ⏳ Fases 3.3–3.4 |
-| Gemini + generación | ⏳ Fase 4 (ver [`AI.md`](AI.md)) |
+| Frontend del workspace (mapa, carrusel, timeline, progreso) | ⏳ Fases 4.5–4.6 y 5.3 |
+| Frontend del dashboard (filtros, reapertura, publicación) | ⏳ Fase 6.4 |
+| Clima por día (HU 2.6) y chat de refinamiento (HU 1.3) | ⏳ proveedor/decisión pendiente |
+| Pruebas de carga de `/generate` y `/plans` | ⏳ Fase 7.3 |
 
 Antes de conectar el frontend, confirma con el equipo:
 

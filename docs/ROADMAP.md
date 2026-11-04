@@ -4,8 +4,11 @@ Entrega **incremental por rebanadas verticales**. Una fase no empieza hasta que 
 definición de terminado (DoD). Cada rebanada incluye dominio + caso de uso + adaptador + ruta + tests +
 docs. No se hace `git commit` sin autorización del usuario.
 
-**Fase actual: 3 — Intake conversacional. Backend 3.1–3.2 completo (88 tests de backend + 6 de
-shared); 1.4, 2.4, 3.3–3.4 (frontend) y 2.5 (disponibilidad) pendientes.**
+**Fase actual: 7 — Reportes y endurecimiento (backend completo).** Fases 4–7 implementadas en
+backend: generación con IA anclada al catálogo, edición y presupuesto, guardado/publicación/dashboard
+API, reportes JSON/CSV y PDF. Quedan pendientes el frontend (1.4, 2.4, 3.3–3.4, 4.5–4.6, 5.3, 6.4),
+la disponibilidad de catálogo 2.5 (HU 3.3–3.4), el clima 5.7, el chat de refinamiento 5.8, las pruebas
+de carga 7.3 y aplicar migraciones/seed cuando se configure Supabase.
 
 ## DoD común
 
@@ -65,20 +68,20 @@ generada); faltan 2.4, 2.5 y aplicar migraciones/seed cuando el equipo configure
 
 **DoD:** un prompt incompleto nunca falla; máx. 2 preguntas por turno; `missingFields` correcto;
 tests de extracción con ≥ 10 prompts reales. Backend cumplido: 3.1–3.2 implementados, migración
-`0003_trip_request_adults_nullable`, 23 tests del parser y 88 tests de backend en total. Faltan las
+`0003_trip_request_adults_nullable`; la suite completa suma 124 tests de backend. Faltan las
 rebanadas de frontend 3.3–3.4.
 
 ## Fase 4 — Generación con IA anclada al catálogo
 
-| Rebanada | Entrega |
-|---|---|
-| 4.1 | `AiPlannerPort` + `PromptBuilder` + `PlanOutputValidator` (Zod) + adaptador `mock` determinista |
-| 4.2 | Adaptador Gemini con JSON schema, timeout, 1 reparación, métricas de tokens/latencia |
-| 4.3 | `GeneratePlanUseCase`: shortlist → IA → validación de IDs → recálculo → `Plan DRAFT` |
-| 4.4 | `ai_jobs` + worker in-process + `POST /generate` (202) + polling |
-| 4.5 | Frontend: mapa Leaflet con pines de precio + carrusel "Destinos para ti" + timeline por días |
-| 4.6 | Progreso por etapas en UI (HU 1.4): interpretando → consultando catálogo → armando itinerario → calculando presupuesto |
-| 4.7 | Validación de disponibilidad del shortlist antes de generar (HU 3.4); un ítem no disponible se descarta o sustituye |
+| Rebanada | Entrega | Estado |
+|---|---|---|
+| 4.1 | `AiPlannerPort` + `PromptBuilder` + `PlanOutputValidator` (Zod) + adaptador `mock` determinista | ✅ |
+| 4.2 | Adaptador Gemini con JSON schema, timeout, 1 reparación, métricas de tokens/latencia | ✅ |
+| 4.3 | `GeneratePlanUseCase`: shortlist → IA → validación de IDs → recálculo → `Plan DRAFT` | ✅ |
+| 4.4 | `ai_jobs` + worker in-process + `POST /generate` (202) + polling | ✅ |
+| 4.5 | Frontend: mapa Leaflet con pines de precio + carrusel "Destinos para ti" + timeline por días | ⏳ |
+| 4.6 | Progreso por etapas en UI (HU 1.4): interpretando → consultando catálogo → armando itinerario → calculando presupuesto | ⏳ |
+| 4.7 | Validación de disponibilidad del shortlist antes de generar (HU 3.4); un ítem no disponible se descarta o sustituye | ⏳ depende de 2.5 |
 
 **DoD:** ningún precio proviene del modelo; IDs inválidos se descartan sin romper el plan; timeout
 produce `FAILED` recuperable; el modo `mock` corre los tests sin red; `AI_PROVIDER=mock` funciona en
@@ -86,16 +89,16 @@ demo; ninguna generación incluye ítems no disponibles.
 
 ## Fase 5 — Edición y presupuesto
 
-| Rebanada | Entrega |
-|---|---|
-| 5.1 | `GET /plans/:id/alternatives` (mismo tipo/destino/moneda, 3 opciones) |
-| 5.2 | `PATCH /plans/:id/items/:itemId` + recálculo transaccional + snapshot |
-| 5.3 | Frontend: modal de alternativas, actualización optimista con rollback, tarjeta sticky de costos |
-| 5.4 | Subtotal por día en el timeline y en el resumen (HU 2.4) |
-| 5.5 | Edición manual de ítems: agregar, quitar, reordenar y ajustar horarios/cantidades (HU 2.5) |
-| 5.6 | Margen 0–100 % + migración del CHECK `plans.margin_percent` (HU 2.9) |
-| 5.7 | Clima por día para destino y fechas (HU 2.6); si el proveedor falla, el plan se muestra sin clima |
-| 5.8 | Chat de refinamiento conversacional sobre el plan editable (HU 1.3) |
+| Rebanada | Entrega | Estado |
+|---|---|---|
+| 5.1 | `GET /plans/:id/alternatives` (mismo tipo/destino/moneda, 3 opciones) | ✅ |
+| 5.2 | `PATCH /plans/:id/items/:itemId` + recálculo transaccional + snapshot | ✅ |
+| 5.3 | Frontend: modal de alternativas, actualización optimista con rollback, tarjeta sticky de costos | ⏳ |
+| 5.4 | Subtotal por día en el timeline y en el resumen (HU 2.4) | ✅ API (`PlanDayDto.subtotal`) |
+| 5.5 | Edición manual de ítems: agregar, quitar, reordenar y ajustar horarios/cantidades (HU 2.5) | ✅ |
+| 5.6 | Margen 0–100 % + migración del CHECK `plans.margin_percent` (HU 2.9) | ✅ migración `0004` |
+| 5.7 | Clima por día para destino y fechas (HU 2.6); si el proveedor falla, el plan se muestra sin clima | ⏳ proveedor por decidir |
+| 5.8 | Chat de refinamiento conversacional sobre el plan editable (HU 1.3) | ⏳ |
 
 **DoD:** el total del cliente coincide con el del servidor; `PUBLISHED` rechaza edición con `409`;
 test de redondeo de margen; la suma de subtotales diarios coincide con `plan.subtotal`; el clima es
@@ -103,26 +106,26 @@ solo informativo y su fallo no bloquea el plan.
 
 ## Fase 6 — Guardado, publicación y dashboard
 
-| Rebanada | Entrega |
-|---|---|
-| 6.1 | `PATCH /plans/:id` (título, resumen, tags) + validaciones |
-| 6.2 | `POST /publish`, `/archive`, `/duplicate` + reglas INV-07/08 |
-| 6.3 | `GET /plans` con filtros (`status`, `q`, `destinationId`) y paginación |
-| 6.4 | Frontend: dashboard con filtros, reapertura de plan, confirmación de publicación |
-| 6.5 | Estado `SAVED` editable: migración del enum y reglas de reapertura (HU 2.7) |
+| Rebanada | Entrega | Estado |
+|---|---|---|
+| 6.1 | `PATCH /plans/:id` (título, resumen, tags) + validaciones | ✅ |
+| 6.2 | `POST /publish`, `/archive`, `/duplicate` + reglas INV-07/08 | ✅ |
+| 6.3 | `GET /plans` con filtros (`status`, `q`, `destinationId`) y paginación | ✅ |
+| 6.4 | Frontend: dashboard con filtros, reapertura de plan, confirmación de publicación | ⏳ |
+| 6.5 | Estado `SAVED` editable: migración del enum y reglas de reapertura (HU 2.7) | ✅ |
 
 **DoD:** publicar sin título o sin ítems devuelve `422`; duplicar crea `DRAFT` con `version + 1`;
 un asesor no ve planes ajenos; `SAVED` se puede editar y `PUBLISHED` sigue inmutable.
 
 ## Fase 7 — Reportes y endurecimiento
 
-| Rebanada | Entrega |
-|---|---|
-| 7.1 | `GET /plans/:id/report` (JSON/CSV) con desglose por categoría y día |
-| 7.2 | Rate limits definitivos, auditoría de dependencias, revisión de logs sin PII |
-| 7.3 | Pruebas de carga básicas en `/generate` y `/plans` |
-| 7.4 | Documento de despliegue (Supabase + hosting del backend y del SPA) |
-| 7.5 | Exportación PDF del plan (HU 2.8): portada, itinerario, ítems y totales |
+| Rebanada | Entrega | Estado |
+|---|---|---|
+| 7.1 | `GET /plans/:id/report` (JSON/CSV) con desglose por categoría y día | ✅ |
+| 7.2 | Rate limits definitivos, auditoría de dependencias, revisión de logs sin PII | 🟡 rate limits y logs listos; auditoría pendiente |
+| 7.3 | Pruebas de carga básicas en `/generate` y `/plans` | ⏳ |
+| 7.4 | Documento de despliegue (Supabase + hosting del backend y del SPA) | ✅ [`DEPLOYMENT.md`](DEPLOYMENT.md) |
+| 7.5 | Exportación PDF del plan (HU 2.8): portada, itinerario, ítems y totales | ✅ |
 
 **DoD:** reporte cuadra con el presupuesto; `npm audit` sin high/critical; checklist de seguridad de
 `AGENTS.md` completo; el PDF se genera desde el plan persistido y no recalcula precios en el cliente.
@@ -156,12 +159,10 @@ un asesor no ve planes ajenos; `SAVED` se puede editar y `PUBLISHED` sigue inmut
 - **Supabase free tier:** límite de conexiones; usar pooler y mantener transacciones cortas.
 - **Modelo de disponibilidad:** falta decidir si se modela como cupos por fecha, bloqueos o ambos;
   afecta catálogo, generación y edición. No implementar 2.5 sin esa decisión.
-- **Margen 0–100:** el CHECK actual de `plans.margin_percent` es 0–50; la migración debe acompañar
-  la rebanada 5.6 y actualizar `DOMAIN.md`/`schema.prisma` en el mismo cambio.
 - **Clima:** proveedor, cobertura de Colombia y caché por decidir; debe degradar sin bloquear el plan.
-- **PDF:** decidir generación en backend (cola/worker) o en cliente; el PDF nunca debe recalcular precios.
-- **Estado `SAVED`:** implica migración del enum `PlanStatus` y revisar todas las reglas de edición;
-  `PUBLISHED` permanece inmutable.
 - **Etapas de generación:** definir si el progreso por etapas se persiste en `ai_jobs` o queda solo
   como estado de UI; hoy la decisión es UI, no persistido.
-- **Alcance del curso:** si el tiempo aprieta, 7.3 y 7.4 son recortables; 1–6 son el MVP.
+- **Runner in-process:** suficiente para una instancia; multi-instancia exige cola/worker y rate limits
+  compartidos (ver [`DEPLOYMENT.md`](DEPLOYMENT.md#11-por-qué-no-todo-en-vercel)).
+- **Alcance del curso:** si el tiempo aprieta, 7.3 (pruebas de carga) y la auditoría de 7.2 son
+  recortables; el backend de 1–6 y el despliegue son el MVP.

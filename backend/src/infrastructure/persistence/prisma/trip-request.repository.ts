@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import type { TripRequest as TripRequestRecord, PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
 import type { MissingField } from '@turiviaje/shared';
 import { TripRequest } from '../../../domain/intake/trip-request.js';
 import type {
@@ -8,6 +8,12 @@ import type {
   TripRequestSearchCriteria,
 } from '../../../domain/intake/ports.js';
 import { toSafeMinor } from './catalog-mappers.js';
+
+const PLAN_SELECT = {
+  plan: { select: { id: true, deletedAt: true } },
+} satisfies Prisma.TripRequestInclude;
+
+type TripRequestRow = Prisma.TripRequestGetPayload<{ include: typeof PLAN_SELECT }>;
 
 const MISSING_FIELDS: readonly MissingField[] = [
   'destination',
@@ -43,7 +49,7 @@ function toExtractedSlots(value: Prisma.JsonValue | null): Record<string, unknow
   return value as Record<string, unknown>;
 }
 
-function toDomain(row: TripRequestRecord): TripRequest {
+function toDomain(row: TripRequestRow): TripRequest {
   return TripRequest.fromPersistence({
     id: row.id,
     advisorId: row.advisorId,
@@ -64,6 +70,7 @@ function toDomain(row: TripRequestRecord): TripRequest {
     },
     extractedSlots: toExtractedSlots(row.extractedSlots),
     missingFields: toMissingFields(row.missingFields),
+    planId: row.plan && row.plan.deletedAt === null ? row.plan.id : null,
     errorCode: row.errorCode,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -99,12 +106,16 @@ export class PrismaTripRequestRepository implements TripRequestRepository {
   async create(request: TripRequest): Promise<TripRequest> {
     const row = await this.prisma.tripRequest.create({
       data: { id: request.id, ...toData(request) },
+      include: PLAN_SELECT,
     });
     return toDomain(row);
   }
 
   async findById(id: string): Promise<TripRequest | null> {
-    const row = await this.prisma.tripRequest.findUnique({ where: { id } });
+    const row = await this.prisma.tripRequest.findUnique({
+      where: { id },
+      include: PLAN_SELECT,
+    });
     if (!row || row.deletedAt !== null) return null;
     return toDomain(row);
   }
@@ -114,6 +125,7 @@ export class PrismaTripRequestRepository implements TripRequestRepository {
       const row = await this.prisma.tripRequest.update({
         where: { id: request.id },
         data: toData(request),
+        include: PLAN_SELECT,
       });
       return toDomain(row);
     } catch (error) {
@@ -132,6 +144,7 @@ export class PrismaTripRequestRepository implements TripRequestRepository {
     const [rows, total] = await Promise.all([
       this.prisma.tripRequest.findMany({
         where,
+        include: PLAN_SELECT,
         orderBy: { createdAt: 'desc' },
         skip: (criteria.page - 1) * criteria.pageSize,
         take: criteria.pageSize,

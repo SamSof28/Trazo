@@ -47,3 +47,10 @@ export const tripRequestLimiter = rateLimit({
   limit: 20,
   keyGenerator: (req) => req.auth?.userId ?? req.ip ?? 'unknown',
 });
+
+export const generationLimiter = rateLimit({
+  ...common,
+  windowMs: 60 * 60_000,
+  limit: 10,
+  keyGenerator: (req) => req.auth?.userId ?? req.ip ?? 'unknown',
+});

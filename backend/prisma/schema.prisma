@@ -24,6 +24,7 @@ enum TripRequestStatus {
 
 enum PlanStatus {
   DRAFT
+  SAVED
   PUBLISHED
   ARCHIVED
 }
@@ -288,6 +289,7 @@ model PlanItem {
   activityId        String?       @map("activity_id") @db.Uuid
   transportOptionId String?       @map("transport_option_id") @db.Uuid
   nameSnapshot      String        @map("name_snapshot") @db.VarChar(160)
+  imageUrl          String?       @map("image_url")
   unitPriceMinor    BigInt        @map("unit_price_minor")
   quantity          Int           @default(1) @db.SmallInt
   pricingUnit       PricingUnit   @map("pricing_unit")

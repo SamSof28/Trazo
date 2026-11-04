@@ -27,6 +27,26 @@ import { CreateTripRequestUseCase } from '../src/application/intake/create-trip-
 import { GetTripRequestUseCase } from '../src/application/intake/get-trip-request.use-case.js';
 import { ListTripRequestsUseCase } from '../src/application/intake/list-trip-requests.use-case.js';
 import { AnswerTripRequestUseCase } from '../src/application/intake/answer-trip-request.use-case.js';
+import { StartGenerationUseCase } from '../src/application/planning/start-generation.use-case.js';
+import { RunGenerationJobUseCase } from '../src/application/planning/run-generation-job.use-case.js';
+import { GetPlanUseCase } from '../src/application/planning/get-plan.use-case.js';
+import { ListPlansUseCase } from '../src/application/planning/list-plans.use-case.js';
+import { UpdatePlanUseCase } from '../src/application/planning/update-plan.use-case.js';
+import {
+  AddPlanItemUseCase,
+  MovePlanItemUseCase,
+  RemovePlanItemUseCase,
+  ReplacePlanItemUseCase,
+  UpdatePlanItemUseCase,
+} from '../src/application/planning/plan-items.use-cases.js';
+import {
+  ArchivePlanUseCase,
+  DuplicatePlanUseCase,
+  PublishPlanUseCase,
+  SavePlanUseCase,
+} from '../src/application/planning/plan-lifecycle.use-cases.js';
+import { ListPlanAlternativesUseCase } from '../src/application/planning/plan-alternatives.use-case.js';
+import { GetPlanReportUseCase } from '../src/application/planning/plan-report.use-case.js';
 import { AuthController } from '../src/interfaces/http/auth.controller.js';
 import { UserController } from '../src/interfaces/http/user.controller.js';
 import { DestinationController } from '../src/interfaces/http/destination.controller.js';
@@ -34,7 +54,9 @@ import { HotelController } from '../src/interfaces/http/hotel.controller.js';
 import { ActivityController } from '../src/interfaces/http/activity.controller.js';
 import { TransportController } from '../src/interfaces/http/transport.controller.js';
 import { TripRequestController } from '../src/interfaces/http/trip-request.controller.js';
+import { PlanController } from '../src/interfaces/http/plan.controller.js';
 import { JwtAccessTokenService } from '../src/infrastructure/security/jwt-access-token.service.js';
+import { MockPlanner } from '../src/infrastructure/ai/mock-planner.js';
 import {
   FakeHasher,
   FixedClock,
@@ -63,6 +85,11 @@ import {
   makeTransportOption,
 } from './catalog-fakes.js';
 import { InMemoryTripRequestRepository } from './intake-fakes.js';
+import {
+  DeferredGenerationRunner,
+  InMemoryAiJobRepository,
+  InMemoryPlanRepository,
+} from './planning-fakes.js';
 
 const SECRET = 'test-secret-that-is-at-least-32-chars-long';
 
@@ -78,9 +105,19 @@ export function buildTestApp(): {
   intake: {
     tripRequests: InMemoryTripRequestRepository;
   };
+  planning: {
+    plans: InMemoryPlanRepository;
+    aiJobs: InMemoryAiJobRepository;
+    runner: DeferredGenerationRunner;
+  };
 } {
   const users = new InMemoryUserRepository([
     makeUser(),
+    makeUser({
+      id: 'user-2',
+      name: 'Otro Asesor',
+      email: 'otro@turiviaje.co',
+    }),
     makeUser({
       id: 'admin-1',
       name: 'Admin Demo',
@@ -171,6 +208,8 @@ export function buildTestApp(): {
     }),
   ]);
   const tripRequests = new InMemoryTripRequestRepository();
+  const plans = new InMemoryPlanRepository();
+  const aiJobs = new InMemoryAiJobRepository();
 
   const authController = new AuthController(
     new LoginUseCase(users, hasher, accessTokens, refreshTokens, tokens, clock, 7),
@@ -204,11 +243,53 @@ export function buildTestApp(): {
     new UpdateTransportOptionUseCase(transportOptions, destinations, clock),
     new DeactivateTransportOptionUseCase(transportOptions, clock),
   );
+  const runGenerationJob = new RunGenerationJobUseCase({
+    tripRequests,
+    plans,
+    aiJobs,
+    destinations,
+    hotels,
+    activities,
+    transportOptions,
+    planner: new MockPlanner(),
+    clock,
+    timeoutMs: 5_000,
+  });
+  const runner = new DeferredGenerationRunner(runGenerationJob);
+
   const tripRequestController = new TripRequestController(
     new CreateTripRequestUseCase(tripRequests, destinations, clock),
     new GetTripRequestUseCase(tripRequests, destinations),
     new ListTripRequestsUseCase(tripRequests, destinations),
     new AnswerTripRequestUseCase(tripRequests, destinations, clock),
+    new StartGenerationUseCase(tripRequests, plans, aiJobs, clock),
+    runner,
+  );
+
+  const planItemDependencies = {
+    plans,
+    destinations,
+    tripRequests,
+    clock,
+    hotels,
+    activities,
+    transportOptions,
+  };
+  const planController = new PlanController(
+    new ListPlansUseCase(plans, destinations),
+    new GetPlanUseCase(plans, destinations),
+    new UpdatePlanUseCase(plans, destinations, clock),
+    new AddPlanItemUseCase(planItemDependencies),
+    new ReplacePlanItemUseCase(planItemDependencies),
+    new UpdatePlanItemUseCase(planItemDependencies),
+    new MovePlanItemUseCase(planItemDependencies),
+    new RemovePlanItemUseCase(planItemDependencies),
+    new SavePlanUseCase({ plans, destinations, tripRequests, clock }),
+    new PublishPlanUseCase({ plans, destinations, tripRequests, clock }),
+    new ArchivePlanUseCase({ plans, destinations, tripRequests, clock }),
+    new DuplicatePlanUseCase({ plans, destinations, tripRequests, clock }),
+    new ListPlanAlternativesUseCase({ plans, hotels, activities, transportOptions }),
+    new GetPlanReportUseCase(plans, destinations),
   );
 
   const app = createApp({
@@ -219,6 +300,7 @@ export function buildTestApp(): {
     activityController,
     transportController,
     tripRequestController,
+    planController,
     accessTokens,
     healthCheck: async () => true,
   });
@@ -228,6 +310,7 @@ export function buildTestApp(): {
     accessTokens,
     catalog: { destinations, hotels, activities, transportOptions },
     intake: { tripRequests },
+    planning: { plans, aiJobs, runner },
   };
 }
 

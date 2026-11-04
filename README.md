@@ -7,11 +7,14 @@ actividades, transporte, itinerario por días, presupuesto y ficha publicable).
 La experiencia se inspira en [layla.ai](https://layla.ai/es): sin formularios de búsqueda, un único
 *super prompt*, y después un panel dividido (chat a la izquierda, resultados y mapa a la derecha).
 
-> **Estado:** los backends de las fases 0, 1, 2 y 3 ya están implementados (monorepo, configuración
-> validada, identidad, RBAC, catálogo, intake conversacional determinista y tests). El frontend y los
-> módulos de planificación/IA aún no existen. Este README y `AGENTS.md` son la fuente de verdad del
-> producto y del dominio; `docs/` contiene arquitectura, contrato de API, modelo de datos, mapa del
-> backend, IA y hoja de ruta. Léelos antes de escribir código.
+> **Estado:** los backends de las fases 0–7 ya están implementados (monorepo, configuración validada,
+> identidad, RBAC, catálogo, intake conversacional determinista, generación con IA anclada al catálogo,
+> edición de planes, publicación, reportes y PDF) con **124 tests de backend + 6 de shared**. El
+> frontend, la disponibilidad de catálogo (HU 3.3–3.4) y el clima (HU 2.6) siguen pendientes; las
+> migraciones y el seed aún no se aplican porque Supabase no está configurado. Este README y
+> `AGENTS.md` son la fuente de verdad del producto y del dominio; `docs/` contiene arquitectura,
+> contrato de API, modelo de datos, mapa del backend, IA, despliegue y hoja de ruta. Léelos antes de
+> escribir código.
 
 ---
 
@@ -53,7 +56,7 @@ mapa y presupuesto desglosado, y lo guarda/publica en la oferta de la agencia.
 - Ficha del plan: hero banner, etiquetas de intereses, timeline por días, tarjeta sticky de costos.
 - Guardado, listado con filtros, publicación y archivado.
 - Mapa interactivo con pines de precio y transporte, y carrusel de destinos sugeridos.
-- Reporte básico del plan (JSON/CSV; PDF opcional).
+- Reporte básico del plan (JSON/CSV) y exportación PDF.
 
 **Fuera (por ahora):** pagos reales, reservas con proveedores, multi-tenant, app móvil, chat libre
 sin límites, integración con GDS/amadeus real, facturación electrónica.
@@ -368,6 +371,7 @@ Criterios de aceptación detallados por historia: [`docs/ROADMAP.md`](docs/ROADM
 | [`docs/API.md`](docs/API.md) | Contrato REST, errores, paginación, RBAC |
 | [`docs/BACKEND.md`](docs/BACKEND.md) | Mapa real de controllers, endpoints, Supabase y consumo desde el frontend |
 | [`docs/AI.md`](docs/AI.md) | Configuración de Gemini, prompt de negocio y grounding al catálogo |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Supabase, migraciones, seed, backend persistente y SPA en Vercel |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Fases incrementales y definición de terminado |
 
 ## 11. Cómo se construye

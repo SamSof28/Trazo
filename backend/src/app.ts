@@ -9,6 +9,7 @@ import type { ActivityController } from './interfaces/http/activity.controller.j
 import type { AuthController } from './interfaces/http/auth.controller.js';
 import type { DestinationController } from './interfaces/http/destination.controller.js';
 import type { HotelController } from './interfaces/http/hotel.controller.js';
+import type { PlanController } from './interfaces/http/plan.controller.js';
 import type { TransportController } from './interfaces/http/transport.controller.js';
 import type { TripRequestController } from './interfaces/http/trip-request.controller.js';
 import type { UserController } from './interfaces/http/user.controller.js';
@@ -24,6 +25,7 @@ export interface AppDependencies {
   activityController: ActivityController;
   transportController: TransportController;
   tripRequestController: TripRequestController;
+  planController: PlanController;
   accessTokens: AccessTokenService;
   healthCheck: () => Promise<boolean>;
 }

@@ -41,6 +41,7 @@ export function toTripRequestDto(
     },
     missingFields: [...request.missingFields],
     questions,
+    planId: request.planId,
     errorCode: request.errorCode,
     createdAt: request.createdAt.toISOString(),
     updatedAt: request.updatedAt.toISOString(),

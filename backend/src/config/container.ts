@@ -1,5 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 import { env } from './env.js';
+import { logger } from './logger.js';
 import type { AccessTokenService } from '../domain/identity/ports.js';
 import { LoginUseCase } from '../application/identity/login.use-case.js';
 import { RefreshUseCase } from '../application/identity/refresh.use-case.js';
@@ -27,6 +28,26 @@ import { CreateTripRequestUseCase } from '../application/intake/create-trip-requ
 import { GetTripRequestUseCase } from '../application/intake/get-trip-request.use-case.js';
 import { ListTripRequestsUseCase } from '../application/intake/list-trip-requests.use-case.js';
 import { AnswerTripRequestUseCase } from '../application/intake/answer-trip-request.use-case.js';
+import { StartGenerationUseCase } from '../application/planning/start-generation.use-case.js';
+import { RunGenerationJobUseCase } from '../application/planning/run-generation-job.use-case.js';
+import { GetPlanUseCase } from '../application/planning/get-plan.use-case.js';
+import { ListPlansUseCase } from '../application/planning/list-plans.use-case.js';
+import { UpdatePlanUseCase } from '../application/planning/update-plan.use-case.js';
+import {
+  AddPlanItemUseCase,
+  MovePlanItemUseCase,
+  RemovePlanItemUseCase,
+  ReplacePlanItemUseCase,
+  UpdatePlanItemUseCase,
+} from '../application/planning/plan-items.use-cases.js';
+import {
+  ArchivePlanUseCase,
+  DuplicatePlanUseCase,
+  PublishPlanUseCase,
+  SavePlanUseCase,
+} from '../application/planning/plan-lifecycle.use-cases.js';
+import { ListPlanAlternativesUseCase } from '../application/planning/plan-alternatives.use-case.js';
+import { GetPlanReportUseCase } from '../application/planning/plan-report.use-case.js';
 import { Argon2PasswordHasher } from '../infrastructure/security/argon2-password-hasher.js';
 import { JwtAccessTokenService } from '../infrastructure/security/jwt-access-token.service.js';
 import { RandomTokenGenerator } from '../infrastructure/security/random-token.generator.js';
@@ -39,6 +60,11 @@ import { PrismaHotelRepository } from '../infrastructure/persistence/prisma/hote
 import { PrismaActivityRepository } from '../infrastructure/persistence/prisma/activity.repository.js';
 import { PrismaTransportOptionRepository } from '../infrastructure/persistence/prisma/transport-option.repository.js';
 import { PrismaTripRequestRepository } from '../infrastructure/persistence/prisma/trip-request.repository.js';
+import { PrismaPlanRepository } from '../infrastructure/persistence/prisma/plan.repository.js';
+import { PrismaAiJobRepository } from '../infrastructure/persistence/prisma/ai-job.repository.js';
+import { GeminiPlanner } from '../infrastructure/ai/gemini-planner.js';
+import { MockPlanner } from '../infrastructure/ai/mock-planner.js';
+import { InProcessGenerationRunner } from '../infrastructure/ai/in-process-generation-runner.js';
 import { AuthController } from '../interfaces/http/auth.controller.js';
 import { UserController } from '../interfaces/http/user.controller.js';
 import { DestinationController } from '../interfaces/http/destination.controller.js';
@@ -46,6 +72,7 @@ import { HotelController } from '../interfaces/http/hotel.controller.js';
 import { ActivityController } from '../interfaces/http/activity.controller.js';
 import { TransportController } from '../interfaces/http/transport.controller.js';
 import { TripRequestController } from '../interfaces/http/trip-request.controller.js';
+import { PlanController } from '../interfaces/http/plan.controller.js';
 import type { AppDependencies } from '../app.js';
 
 export interface Container extends AppDependencies {
@@ -61,6 +88,16 @@ export function buildContainer(): Container {
   const activities = new PrismaActivityRepository(prisma);
   const transportOptions = new PrismaTransportOptionRepository(prisma);
   const tripRequests = new PrismaTripRequestRepository(prisma);
+  const plans = new PrismaPlanRepository(prisma);
+  const aiJobs = new PrismaAiJobRepository(prisma);
+  const planner =
+    env.AI_PROVIDER === 'gemini'
+      ? new GeminiPlanner({
+          apiKey: env.GEMINI_API_KEY ?? '',
+          model: env.GEMINI_MODEL,
+          timeoutMs: env.AI_TIMEOUT_MS,
+        })
+      : new MockPlanner();
   const hasher = new Argon2PasswordHasher();
   const tokens = new RandomTokenGenerator();
   const clock = new SystemClock();
@@ -120,6 +157,48 @@ export function buildContainer(): Container {
     new GetTripRequestUseCase(tripRequests, destinations),
     new ListTripRequestsUseCase(tripRequests, destinations),
     new AnswerTripRequestUseCase(tripRequests, destinations, clock),
+    new StartGenerationUseCase(tripRequests, plans, aiJobs, clock),
+    new InProcessGenerationRunner(
+      new RunGenerationJobUseCase({
+        tripRequests,
+        plans,
+        aiJobs,
+        destinations,
+        hotels,
+        activities,
+        transportOptions,
+        planner,
+        clock,
+        timeoutMs: env.AI_TIMEOUT_MS,
+      }),
+      logger,
+    ),
+  );
+
+  const planItemDependencies = {
+    plans,
+    destinations,
+    tripRequests,
+    clock,
+    hotels,
+    activities,
+    transportOptions,
+  };
+  const planController = new PlanController(
+    new ListPlansUseCase(plans, destinations),
+    new GetPlanUseCase(plans, destinations),
+    new UpdatePlanUseCase(plans, destinations, clock),
+    new AddPlanItemUseCase(planItemDependencies),
+    new ReplacePlanItemUseCase(planItemDependencies),
+    new UpdatePlanItemUseCase(planItemDependencies),
+    new MovePlanItemUseCase(planItemDependencies),
+    new RemovePlanItemUseCase(planItemDependencies),
+    new SavePlanUseCase({ plans, destinations, tripRequests, clock }),
+    new PublishPlanUseCase({ plans, destinations, tripRequests, clock }),
+    new ArchivePlanUseCase({ plans, destinations, tripRequests, clock }),
+    new DuplicatePlanUseCase({ plans, destinations, tripRequests, clock }),
+    new ListPlanAlternativesUseCase({ plans, hotels, activities, transportOptions }),
+    new GetPlanReportUseCase(plans, destinations),
   );
 
   return {
@@ -132,6 +211,7 @@ export function buildContainer(): Container {
     activityController,
     transportController,
     tripRequestController,
+    planController,
     healthCheck: async () => {
       try {
         await prisma.$queryRaw`SELECT 1`;

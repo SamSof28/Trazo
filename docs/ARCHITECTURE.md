@@ -1,8 +1,12 @@
 # Arquitectura — TuriViajes
 
-Documento de referencia para implementar. Complementa [`../README.md`](../README.md),
-[`DOMAIN.md`](DOMAIN.md), [`BACKEND.md`](BACKEND.md) (mapa real del backend) y [`AI.md`](AI.md)
-(configuración de Gemini y grounding). Si algo aquí no coincide con el código, se corrige el documento.
+Documento de referencia de la arquitectura implementada. Complementa [`../README.md`](../README.md),
+[`DOMAIN.md`](DOMAIN.md), [`BACKEND.md`](BACKEND.md) (mapa real del backend), [`AI.md`](AI.md)
+(configuración de Gemini y grounding) y [`DEPLOYMENT.md`](DEPLOYMENT.md) (Supabase + Vercel). Si algo
+aquí no coincide con el código, se corrige el documento.
+
+> **Estado:** backend de las fases 0–7 implementado. El frontend, la disponibilidad de catálogo
+> (HU 3.3–3.4) y el clima (HU 2.6) siguen pendientes.
 
 ## 1. Principios
 
@@ -18,7 +22,7 @@ Documento de referencia para implementar. Complementa [`../README.md`](../README
 | Capa | Contiene | Puede importar |
 |---|---|---|
 | `domain` | Entidades, value objects (`Money`, `DateRange`, `Budget`), reglas, puertos, errores de dominio | Nada externo |
-| `application` | Casos de uso, DTOs de entrada/salida, orquestación, transacciones (vía puerto `UnitOfWork`) | `domain` |
+| `application` | Casos de uso, DTOs de entrada/salida, orquestación, validación de salida de IA | `domain` |
 | `infrastructure` | Prisma, Gemini, catálogo JSON/API, argon2, JWT, pino, storage | `domain`, `application` |
 | `interfaces/http` | Routers, controllers, middlewares, mappers a JSON | `application`, `domain` (tipos) |
 | `config` | Env validado, composition root | Todas |
@@ -26,13 +30,12 @@ Documento de referencia para implementar. Complementa [`../README.md`](../README
 **Regla:** las dependencias apuntan hacia el dominio. `application` recibe puertos por constructor.
 
 ```ts
-// application/plan/generate-plan.use-case.ts
-export class GeneratePlanUseCase {
+// application/planning/update-plan.use-case.ts
+export class UpdatePlanUseCase {
   constructor(
-    private readonly catalog: CatalogPort,
-    private readonly planner: AiPlannerPort,
     private readonly plans: PlanRepository,
-    private readonly uow: UnitOfWork,
+    private readonly destinations: DestinationRepository,
+    private readonly clock: Clock,
   ) {}
 }
 ```
@@ -58,9 +61,10 @@ flowchart LR
 | `planning` | Generación, edición, presupuesto, publicación, dashboard | `Plan`, `PlanDay`, `PlanItem` |
 | `ai` | Puertos de IA, construcción de prompts, validación de salida, adaptadores | — |
 
-`intake` está implementado en la Fase 3 con un parser determinista y sin IA. `planning` y `ai` siguen
-siendo el contrato de las fases 4–6. `planning` no expone entidades de `catalog` al frontend: usa DTOs
-con los campos necesarios.
+`intake` está implementado con un parser determinista y sin IA. `planning` y `ai` están implementados
+desde la Fase 4: `planning` orquesta shortlist, generación, validación, recálculo y ciclo de vida; `ai`
+expone el puerto `AiPlannerPort`, los adaptadores Gemini/mock y la validación de la salida. `planning`
+no expone entidades de `catalog` al frontend: usa DTOs con los campos necesarios.
 
 ## 4. Ciclo de una petición HTTP
 
@@ -72,7 +76,9 @@ requestId → helmet → cors → json(100kb) → rateLimit → auth(JWT) → zo
 
 - Un controller **solo** traduce HTTP ↔ caso de uso (sin reglas de negocio).
 - Los errores de dominio se mapean a códigos HTTP en un único `errorHandler`.
-- `GET /health` (liveness) y `GET /health/ready` (DB; IA cuando exista el adaptador) sin auth.
+- `GET /health` (liveness) y `GET /health/ready` (solo comprueba la DB con `SELECT 1`) sin auth. La
+  disponibilidad de Gemini no bloquea el arranque ni el readiness: si falla, el job queda `FAILED` con
+  `AI_UNAVAILABLE` y se puede reintentar.
 
 ### Modelo de errores
 
@@ -96,7 +102,9 @@ requestId → helmet → cors → json(100kb) → rateLimit → auth(JWT) → zo
 - Prisma como único acceso a datos; **cero SQL concatenado**.
 - Repositorios en `infrastructure/persistence/prisma/*.repository.ts` implementan puertos del dominio
   y mapean filas → entidades (nada de `PrismaClient` fuera de infraestructura).
-- `UnitOfWork` con `$transaction` corta: la generación de IA ocurre **fuera** de la transacción.
+- Las escrituras compuestas usan `$transaction` cortas dentro del repositorio (por ejemplo, guardar un
+  plan reemplaza días e ítems en una transacción). La generación de IA ocurre **fuera** de cualquier
+  transacción; el plan se persiste al final, cuando la salida ya está validada.
 - Migraciones versionadas en `backend/prisma/migrations/`; nunca `db push` en entornos compartidos.
 - `deletedAt` (soft delete) solo en `Plan`/`TripRequest`; catálogo usa `isActive`.
 - Índices mínimos: `plans(advisor_id, status)`, `plan_items(plan_day_id)`, `hotels(destination_id)`,
@@ -106,33 +114,35 @@ requestId → helmet → cors → json(100kb) → rateLimit → auth(JWT) → zo
 
 ```mermaid
 sequenceDiagram
-    participant UC as GeneratePlanUseCase
+    participant UC as RunGenerationJobUseCase
     participant CAT as CatalogPort
     participant PB as PromptBuilder
     participant AI as AiPlannerPort
-    participant VAL as PlanOutputValidator
-    UC->>CAT: shortlist(destino, presupuesto, intereses)
-    CAT-->>UC: hasta 40 items (ID, tipo, precio)
-    UC->>PB: build(slots, shortlist)
+    participant VAL as validatePlanOutput
+    UC->>CAT: shortlist(destino, moneda, intereses)
+    CAT-->>UC: hasta 12 hoteles + 24 actividades + 8 transportes
+    UC->>PB: build(slots, shortlist, destino)
     PB-->>UC: system + user prompt (datos delimitados)
     UC->>AI: generateJson(prompt, schema, timeout)
     AI-->>UC: JSON crudo
     UC->>VAL: validar schema + IDs + coherencia de días
-    VAL-->>UC: plan borrador o errores
-    UC->>UC: recalcular precios desde catálogo
+    VAL-->>UC: salida validada o errores
+    UC->>UC: createPlanFromOutput + Plan.createDraft (recalcula precios)
 ```
 
 Reglas:
 
 - Salida estructurada (JSON Schema) validada con Zod. Una sola reparación automática; luego `AI_INVALID_OUTPUT`.
 - **Grounding obligatorio:** los IDs devueltos deben pertenecer al shortlist enviado; precios y nombres
-  salen de la BD. Un ID desconocido invalida el ítem, no todo el plan.
-- Límites: `AI_TIMEOUT_MS` (45 s), máx. 14 días y 6 ítems/día, 8 000 tokens de salida.
-- Determinismo para tests: `AI_PROVIDER=mock` con fixtures por escenario (presupuesto bajo, sin vuelos, etc.).
-- Cache de shortlist por `(destinationId, budgetBand)` en memoria con TTL corto; no cachear planes.
+  salen de la BD. Un ID desconocido invalida el ítem, no todo el plan; un día no puede quedar vacío.
+- Límites: `AI_TIMEOUT_MS` (45 s), máx. 30 días y 6 ítems/día, 8 000 tokens de salida.
+- Determinismo para tests: `AI_PROVIDER=mock`; los tests HTTP usan `MockPlanner` y fakes, sin red.
+- **Sin caché de shortlist en el MVP:** se recalcula por generación para no usar precios viejos. No se
+  cachean planes ni respuestas completas del modelo.
 - Loggear `model`, `latencyMs`, `tokens`, `outcome`; nunca el prompt completo en producción.
-- Ejecución asíncrona: `POST /generate` responde `202`, el trabajo se persiste en `ai_jobs` y un worker
-  in-process lo procesa; el cliente hace polling del `TripRequest`. Sin Redis en el MVP.
+- Ejecución asíncrona: `POST /generate` responde `202`, el trabajo se persiste en `ai_jobs` y un runner
+  in-process lo procesa; el cliente hace polling del `TripRequest`. Sin Redis en el MVP. Para varias
+  instancias hace falta una cola real (ver [`DEPLOYMENT.md`](DEPLOYMENT.md#11-por-qué-no-todo-en-vercel)).
 
 ## 7. Seguridad
 

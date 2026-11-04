@@ -3,10 +3,10 @@
 Base: `/api/v1`. JSON UTF-8. Autenticación `Authorization: Bearer <accessToken>` salvo donde se indique.
 Este documento es el contrato que consumen el frontend y los tests; cambia junto con el código.
 
-> **Estado:** las secciones 2 (auth e identidad), 3 (catálogo) y 4 (solicitud de viaje) están
-> implementadas. Las secciones 5–6 son el contrato **planificado** para las fases 4–7; no las
-> consumas todavía. El mapa real de controllers y el ejemplo de cliente HTTP están en
-> [`BACKEND.md`](BACKEND.md).
+> **Estado:** las secciones 2 (auth e identidad), 3 (catálogo), 4 (solicitud de viaje y generación),
+> 5 (planes, edición, ciclo de vida, reportes y PDF) y 6 (mapa y sugerencias) están implementadas en
+> backend. El frontend y la disponibilidad de catálogo (HU 3.3–3.4) siguen pendientes. El mapa real de
+> controllers y el ejemplo de cliente HTTP están en [`BACKEND.md`](BACKEND.md).
 
 ## 1. Convenciones
 
@@ -16,7 +16,8 @@ Este documento es el contrato que consumen el frontend y los tests; cambia junto
 - **Paginación:** `?page=1&pageSize=20` (máx. 100) → `{ "items": [], "page": 1, "pageSize": 20, "total": 0 }`.
 - **Errores:** `application/problem+json` con `type`, `title`, `status`, `code`, `detail`, `requestId`,
   `errors[]` (solo validación). Códigos en [`ARCHITECTURE.md`](ARCHITECTURE.md#modelo-de-errores).
-- **Idempotencia:** `POST /plans/:id/publish` y `/generate` aceptan `Idempotency-Key` (UUID).
+- **Idempotencia:** `save` y `archive` son idempotentes por estado. `publish` y `generate` no aceptan
+  `Idempotency-Key`; `generate` solo se reintenta cuando la solicitud quedó `FAILED`.
 - **Campos desconocidos:** rechazados (Zod `.strict()`) → `422 VALIDATION_ERROR`.
 
 ## 2. Auth e identidad (implementado)
@@ -326,7 +327,7 @@ Content-Type: application/json
 | GET | `/trip-requests/:id` | dueño/`ADMIN` | Estado, slots y preguntas pendientes |
 | POST | `/trip-requests/:id/answers` | dueño/`ADMIN` | Responde slots; devuelve faltantes o `READY` |
 | GET | `/trip-requests?status=&page=&pageSize=` | dueño/`ADMIN` | Historial paginado; `ADMIN` ve todo |
-| POST | `/trip-requests/:id/generate` | dueño/`ADMIN` | Encola generación (`202`) — **Fase 4, no implementado** |
+| POST | `/trip-requests/:id/generate` | dueño/`ADMIN` | Encola generación asíncrona (`202`) |
 
 ### 4.1 Crear solicitud
 
@@ -369,6 +370,7 @@ Authorization: Bearer <accessToken>
         "chips": ["Económico", "Medio", "Premium"]
       }
     ],
+    "planId": null,
     "errorCode": null,
     "createdAt": "2026-11-03T15:00:00.000Z",
     "updatedAt": "2026-11-03T15:00:00.000Z"
@@ -419,81 +421,258 @@ POST /api/v1/trip-requests/9f1c.../answers
 - Responder en un estado que no sea `AWAITING_INPUT` o `READY` (p. ej. `GENERATING`) responde
   `409 CONFLICT`.
 
-### 4.4 Generación asíncrona (planificada — Fase 4)
+### 4.4 Generación asíncrona
 
 ```http
 POST /api/v1/trip-requests/9f1c.../generate
-Idempotency-Key: 0b0e...
+Authorization: Bearer <accessToken>
 
 202 Accepted
-{ "tripRequestId": "9f1c...", "status": "GENERATING", "pollAfterMs": 1500 }
+{
+  "tripRequestId": "9f1c...",
+  "jobId": "5b2e...",
+  "status": "GENERATING",
+  "pollAfterMs": 1500
+}
 ```
 
-El cliente consulta `GET /trip-requests/:id` hasta `GENERATED` (incluye `planId`) o `FAILED`
-(incluye `error.code`). Timeout de IA → `FAILED` + `AI_UNAVAILABLE`; reintentar es otro `POST /generate`.
-Doble generación con job activo → `409 CONFLICT`. **Este endpoint todavía no existe.**
+- Solo se puede generar desde `READY` o `FAILED` (reintento). En cualquier otro estado → `409 CONFLICT`.
+- Si la solicitud ya tiene un plan (`planId` no nulo) → `409 CONFLICT`; hay que editar o duplicar el plan.
+- El servidor marca la solicitud `GENERATING`, crea un `ai_jobs` en `QUEUED` y ejecuta el job
+  **in-process**. La respuesta no espera a Gemini.
+- El cliente consulta `GET /trip-requests/:id` cada `pollAfterMs` hasta `GENERATED` (incluye `planId`)
+  o `FAILED` (incluye `errorCode`).
+- `FAILED` puede reintentarse con otro `POST /generate`. El plan no se crea si el job falla.
+- Códigos de fallo posibles: `AI_UNAVAILABLE` (timeout, 429 o 5xx del proveedor), `AI_INVALID_OUTPUT`
+  (JSON inválido tras una reparación), `VALIDATION_ERROR` (catálogo insuficiente o solicitud
+  incompleta), `NOT_FOUND` e `INTERNAL_ERROR`.
+- Rate limit: 10/h/usuario.
 
-## 5. Planes (planificado — Fases 4–6)
+## 5. Planes (implementado — Fases 4–6)
 
-| Método | Ruta | Rol | Descripción |
-|---|---|---|---|
-| GET | `/plans?status=&q=&destinationId=&page=` | dueño/`ADMIN` | Dashboard con filtros |
-| GET | `/plans/:id` | dueño/`ADMIN` | Plan completo (días, ítems, presupuesto) |
-| PATCH | `/plans/:id` | dueño/`ADMIN` | Título comercial, resumen, tags (solo `DRAFT`) |
-| GET | `/plans/:id/alternatives?itemId=` | dueño/`ADMIN` | 3 alternativas del mismo tipo/destino |
-| PATCH | `/plans/:id/items/:itemId` | dueño/`ADMIN` | Reemplaza ítem por `catalogItemId` |
-| DELETE | `/plans/:id/items/:itemId` | dueño/`ADMIN` | Quita ítem (solo `DRAFT`) |
-| POST | `/plans/:id/publish` | dueño/`ADMIN` | `DRAFT` → `PUBLISHED` |
-| POST | `/plans/:id/archive` | dueño/`ADMIN` | → `ARCHIVED` |
-| POST | `/plans/:id/duplicate` | dueño/`ADMIN` | Copia como nuevo `DRAFT` |
-| GET | `/plans/:id/report` | dueño/`ADMIN` | Resumen JSON/CSV para reporte básico |
+Un plan nace `DRAFT` al terminar la generación. `SAVED` sigue siendo editable; `PUBLISHED` es de solo
+lectura y `ARCHIVED` queda fuera del flujo activo. Todas las rutas exigen `Bearer`; un `ADVISOR` solo
+accede a sus planes y un `ADMIN` a todos. Un plan ajeno responde `404`.
 
-```http
-GET /api/v1/plans/7a2b...
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/plans?status=&q=&destinationId=&page=&pageSize=` | Dashboard con filtros y paginación |
+| GET | `/plans/:id` | Plan completo (días, ítems, presupuesto) |
+| PATCH | `/plans/:id` | Título, resumen, tags y margen (solo `DRAFT`/`SAVED`) |
+| GET | `/plans/:id/alternatives?itemId=` | Hasta 3 alternativas del mismo tipo/destino/moneda |
+| POST | `/plans/:id/items` | Agrega un ítem del catálogo a un día |
+| PATCH | `/plans/:id/items/:itemId` | Reemplaza el ítem por otro `catalogItemId` del mismo tipo |
+| PATCH | `/plans/:id/items/:itemId/details` | Ajusta cantidad, horarios o notas |
+| PATCH | `/plans/:id/items/:itemId/position` | Mueve el ítem a otro día/posición |
+| DELETE | `/plans/:id/items/:itemId` | Quita el ítem |
+| POST | `/plans/:id/save` | `DRAFT` → `SAVED` (idempotente) |
+| POST | `/plans/:id/publish` | `DRAFT`/`SAVED` → `PUBLISHED` |
+| POST | `/plans/:id/archive` | → `ARCHIVED` (idempotente) |
+| POST | `/plans/:id/duplicate` | Copia como nuevo `DRAFT` con su propio `TripRequest` |
+| GET | `/plans/:id/report?format=json\|csv` | Reporte JSON o CSV |
+| GET | `/plans/:id/pdf` | PDF descargable del plan |
 
-200 OK
+`PlanDto` (todas las mutaciones devuelven `{ "plan": PlanDto }`; el listado devuelve
+`Paginated<PlanDto>`):
+
+```json
 {
   "id": "7a2b...",
+  "tripRequestId": "9f1c...",
   "title": "Cartagena Esencial 5 días",
   "status": "DRAFT",
-  "destination": { "id": "...", "city": "Cartagena", "country": "Colombia",
-                   "latitude": 10.391, "longitude": -75.479, "heroImageUrl": "..." },
+  "summary": "Cinco días entre el centro histórico, las islas y la gastronomía local.",
+  "heroImageUrl": "https://...",
   "tags": ["playa", "cultura"],
+  "destination": {
+    "id": "...",
+    "city": "Cartagena",
+    "country": "Colombia",
+    "latitude": 10.391049,
+    "longitude": -75.479426,
+    "timezone": "America/Bogota",
+    "heroImageUrl": "https://..."
+  },
+  "currency": "COP",
   "days": [
-    { "dayNumber": 1, "date": "2026-12-10", "subtotal": { "amountMinor": 218000000, "currency": "COP" },
+    {
+      "id": "d1...",
+      "dayNumber": 1,
+      "date": "2026-12-10",
+      "title": "Llegada y centro histórico",
+      "notes": null,
+      "subtotal": { "amountMinor": 218000000, "currency": "COP" },
       "items": [
-        { "id": "i1", "type": "TRANSPORT", "name": "Vuelo MDE → CTG",
-          "startTime": "08:00", "unitPrice": { "amountMinor": 45000000, "currency": "COP" },
-          "quantity": 2, "subtotal": { "amountMinor": 90000000, "currency": "COP" } },
-        { "id": "i2", "type": "ACCOMMODATION", "name": "Hotel Casa San Agustín",
-          "startTime": "15:00", "unitPrice": { "amountMinor": 32000000, "currency": "COP" },
-          "quantity": 4, "subtotal": { "amountMinor": 128000000, "currency": "COP" } }
-      ] }
+        {
+          "id": "i1...",
+          "type": "TRANSPORT",
+          "catalogItemId": "transport-uuid",
+          "name": "Avianca (FLIGHT)",
+          "imageUrl": null,
+          "unitPrice": { "amountMinor": 45000000, "currency": "COP" },
+          "quantity": 2,
+          "pricingUnit": "PER_PERSON",
+          "subtotal": { "amountMinor": 90000000, "currency": "COP" },
+          "startTime": "08:00",
+          "endTime": "09:30",
+          "notes": "Llegada al destino.",
+          "position": 0
+        }
+      ]
+    }
   ],
   "budget": {
     "flights": { "amountMinor": 90000000, "currency": "COP" },
-    "hotels":  { "amountMinor": 128000000, "currency": "COP" },
+    "hotels": { "amountMinor": 128000000, "currency": "COP" },
     "activities": { "amountMinor": 36000000, "currency": "COP" },
     "subtotal": { "amountMinor": 254000000, "currency": "COP" },
-    "marginPercent": 12, "margin": { "amountMinor": 30480000, "currency": "COP" },
+    "marginPercent": 12,
+    "margin": { "amountMinor": 30480000, "currency": "COP" },
     "total": { "amountMinor": 284480000, "currency": "COP" }
-  }
+  },
+  "version": 3,
+  "publishedAt": null,
+  "createdAt": "2026-11-03T15:00:00.000Z",
+  "updatedAt": "2026-11-03T15:05:00.000Z"
 }
 ```
+
+### 5.1 Metadatos y margen
+
+```http
+PATCH /api/v1/plans/7a2b...
+{ "title": "Cartagena Premium", "summary": "Versión con hoteles boutique.",
+  "tags": ["playa", "lujo"], "marginPercent": 12.5 }
+```
+
+- Todos los campos son opcionales, pero debe venir al menos uno; body vacío → `422`.
+- `title` 2–120, `summary` hasta 1000, `tags` hasta 20 de 1–40 caracteres.
+- `marginPercent` entre 0 y 100, máximo dos decimales; el margen y el total se recalculan.
+- El cliente **nunca** envía precios ni totales.
+
+### 5.2 Ítems
+
+```http
+POST /api/v1/plans/7a2b.../items
+{ "dayNumber": 2, "type": "ACTIVITY", "catalogItemId": "activity-uuid",
+  "quantity": 3, "startTime": "15:00", "notes": "Tarde de playa" }
+
+201 Created
+{ "plan": { ...PlanDto actualizado } }
+```
+
+- `dayNumber` 1–30; `type` ∈ `ACCOMMODATION|ACTIVITY|TRANSPORT`; `catalogItemId` debe existir,
+  estar activo, pertenecer al destino del plan y usar la misma moneda.
+- `quantity` es opcional (1–99). Si falta, el servidor la deriva: noches para alojamiento, viajeros
+  para `PER_PERSON`, días para `PER_DAY`, 1 para `PER_TRIP`.
+- Cada día admite máximo 6 ítems. El servidor copia nombre, imagen y precio del catálogo (snapshot).
 
 ```http
 PATCH /api/v1/plans/7a2b.../items/i2
 { "catalogItemId": "hotel-uuid" }
 
-200 OK
-{ "item": { "id": "i2", "name": "Hotel Bóvedas de San Pedro", "quantity": 4 },
-  "budget": { "total": { "amountMinor": 297920000, "currency": "COP" } } }
+PATCH /api/v1/plans/7a2b.../items/i2/details
+{ "quantity": 4, "startTime": "16:00", "endTime": null, "notes": "Check-in tardío" }
+
+PATCH /api/v1/plans/7a2b.../items/i2/position
+{ "dayNumber": 3, "position": 0 }
+
+DELETE /api/v1/plans/7a2b.../items/i2
 ```
 
-Reglas: editar un plan `PUBLISHED` → `409 CONFLICT` (`PLAN_NOT_EDITABLE`); `catalogItemId` de otro
-tipo, destino o moneda → `422`; el servidor recalcula y devuelve el presupuesto actualizado.
+- Reemplazar exige el mismo `type` del ítem original; un tipo distinto → `422`.
+- `details` acepta cualquier subconjunto de `quantity`, `startTime`, `endTime`, `notes`; body vacío → `422`.
+- `position` mueve el ítem al día indicado; si se omite, va al final.
+- `DELETE` responde `200` con el plan completo actualizado.
+- Editar un plan `PUBLISHED` o `ARCHIVED` → `409 PLAN_NOT_EDITABLE`; duplica para editar.
 
-## 6. Mapa y sugerencias (planificado)
+### 5.3 Alternativas
+
+```http
+GET /api/v1/plans/7a2b.../alternatives?itemId=i2
+
+200 OK
+{
+  "itemId": "i2",
+  "alternatives": [
+    {
+      "id": "hotel-uuid",
+      "type": "ACCOMMODATION",
+      "name": "Hotel Bóvedas de San Pedro",
+      "imageUrl": "https://...",
+      "price": { "amountMinor": 96000000, "currency": "COP" },
+      "pricingUnit": "PER_NIGHT",
+      "tags": [],
+      "category": 4,
+      "durationMinutes": null
+    }
+  ]
+}
+```
+
+- Mismo `type`, `destinationId` y moneda; se excluye el ítem actual y se devuelven máximo 3,
+  ordenados por precio ascendente.
+
+### 5.4 Ciclo de vida
+
+```http
+POST /api/v1/plans/7a2b.../save
+POST /api/v1/plans/7a2b.../publish
+POST /api/v1/plans/7a2b.../archive
+POST /api/v1/plans/7a2b.../duplicate
+```
+
+- `save`: `DRAFT` → `SAVED`; si ya está `SAVED`, responde el mismo plan sin error.
+- `publish`: exige título, al menos un ítem y total > 0; `DRAFT`/`SAVED` → `PUBLISHED`.
+  Publicar dos veces → `409 CONFLICT`; publicar un `ARCHIVED` → `409 PLAN_NOT_EDITABLE`.
+- `archive`: pasa a `ARCHIVED`; es idempotente.
+- `duplicate`: crea un `TripRequest` copia y un `Plan DRAFT` nuevo con título `"(copia)"`,
+  ítems y presupuesto recalculados. `version` del nuevo plan = `version` del origen + 1.
+  Responde `201`.
+
+### 5.5 Reportes y PDF
+
+```http
+GET /api/v1/plans/7a2b.../report
+GET /api/v1/plans/7a2b.../report?format=csv
+GET /api/v1/plans/7a2b.../pdf
+```
+
+`PlanReportDto` (JSON):
+
+```json
+{
+  "planId": "7a2b...",
+  "title": "Cartagena Esencial 5 días",
+  "status": "DRAFT",
+  "destination": "Cartagena, Colombia",
+  "days": [
+    {
+      "dayNumber": 1,
+      "date": "2026-12-10",
+      "subtotal": { "amountMinor": 218000000, "currency": "COP" },
+      "items": [
+        { "type": "TRANSPORT", "name": "Avianca (FLIGHT)", "quantity": 2,
+          "subtotal": { "amountMinor": 90000000, "currency": "COP" } }
+      ]
+    }
+  ],
+  "budget": { "flights": { "...": "..." }, "hotels": { "...": "..." },
+              "activities": { "...": "..." }, "subtotal": { "...": "..." },
+              "marginPercent": 12, "margin": { "...": "..." }, "total": { "...": "..." } },
+  "generatedAt": "2026-11-03T15:05:00.000Z"
+}
+```
+
+- `format=csv` responde `text/csv; charset=utf-8` con
+  `Content-Disposition: attachment; filename="plan-<id>.csv"` y columnas
+  `dia,fecha,tipo,item,cantidad,subtotal_minor,moneda`, seguidas de `subtotal`, `margen_pct`,
+  `margen` y `total`.
+- `GET /plans/:id/pdf` responde `application/pdf` con portada, resumen de presupuesto e itinerario.
+  El PDF se genera en el servidor sin dependencias externas.
+- Todos los montos salen del plan persistido; el cliente no calcula nada.
+
+## 6. Mapa y sugerencias (implementado)
 
 El mapa del MVP consume `GET /plans/:id` y `GET /catalog/destinations`; no hay endpoint de tiles.
 El carrusel "Destinos para ti" usa `GET /catalog/destinations?featured=true` (`is_featured`).
@@ -511,8 +690,8 @@ inventa un precio: si `fromPrice` es `null`, el pin solo muestra el nombre.
 | Catálogo (escritura) | ❌ (`403`) | ✅ | ✅ |
 | `trip-requests` propias | CRUD | CRUD | ✅ Fase 3 |
 | `trip-requests` ajenas | ❌ (`404`) | ✅ | ✅ Fase 3 |
-| `plans` propios | CRUD + publicar | CRUD + publicar | ⏳ Fases 4–6 |
-| `plans` ajenos | ❌ (`404`) | ✅ | ⏳ Fases 4–6 |
+| `plans` propios | CRUD + publicar | CRUD + publicar | ✅ Fases 4–6 |
+| `plans` ajenos | ❌ (`404`) | ✅ | ✅ Fases 4–6 |
 | `PATCH /users/:id` | ❌ | ✅ | ⏳ pendiente |
 
 Recurso ajeno ⇒ `404`, no `403` (no revelar existencia). El `advisorId` sale del JWT verificado, nunca
@@ -526,7 +705,7 @@ del body.
 | `POST /auth/refresh` | 30/min/IP | ✅ |
 | Global | 300/min/IP | ✅ |
 | `POST /trip-requests` | 20/h/usuario | ✅ |
-| `POST /trip-requests/:id/generate` | 10/h/usuario | ⏳ Fase 4 |
+| `POST /trip-requests/:id/generate` | 10/h/usuario | ✅ |
 
 Cabeceras `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`; al exceder, `429` con
 `Retry-After`. En tests se desactiva con `RATE_LIMIT_ENABLED=false`; en producción debe quedar `true`.

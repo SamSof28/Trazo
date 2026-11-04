@@ -53,3 +53,21 @@ export class ConflictError extends AppError {
     super(code, 409, 'Conflicto', detail);
   }
 }
+
+export class PlanNotEditableError extends AppError {
+  constructor(detail = 'El plan no se puede editar en su estado actual') {
+    super('PLAN_NOT_EDITABLE', 409, 'Plan no editable', detail);
+  }
+}
+
+export class AiUnavailableError extends AppError {
+  constructor(detail = 'El proveedor de IA no está disponible') {
+    super('AI_UNAVAILABLE', 503, 'IA no disponible', detail);
+  }
+}
+
+export class AiInvalidOutputError extends AppError {
+  constructor(detail = 'La IA devolvió un itinerario inválido') {
+    super('AI_INVALID_OUTPUT', 502, 'Salida de IA inválida', detail);
+  }
+}

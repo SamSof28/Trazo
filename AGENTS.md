@@ -1,9 +1,10 @@
 # AGENTS.md
 
 Instrucciones para sesiones de OpenCode en **TuriViajes** (Módulo 1: diseñador inteligente de planes
-turísticos). El repositorio ya tiene el monorepo y los backends de Fase 0, Fase 1 (identidad), Fase 2
-(catálogo) y Fase 3 (intake conversacional determinista) implementados y con tests. El frontend y los
-módulos de planificación/IA aún no existen.
+turísticos). El repositorio ya tiene el monorepo y el backend completo de las fases 0–7: fundación,
+identidad, catálogo, intake conversacional determinista, generación con IA anclada al catálogo, edición
+y presupuesto, guardado/publicación/dashboard y reportes JSON/CSV + PDF, todo con tests. El frontend
+aún no existe y la base de datos no se ha configurado.
 
 ## Contexto de producto
 
@@ -12,9 +13,10 @@ Un asesor escribe el viaje en lenguaje natural y la app devuelve un plan turíst
 el proceso manual en hojas de cálculo y correos. UX tipo Layla.ai: super prompt → chat que pregunta
 solo lo que falta → split-view con mapa, carrusel y timeline.
 
-Problema, objetivo, alcance, HUs y diagramas: [`README.md`](README.md) §1–§8. Fase actual: **3 —
-Intake conversacional**; 3.1–3.2 completos en backend y las rebanadas de frontend 1.4, 2.4, 3.3–3.4
-pendientes, al igual que la disponibilidad 2.5 ([`docs/ROADMAP.md`](docs/ROADMAP.md)).
+Problema, objetivo, alcance, HUs y diagramas: [`README.md`](README.md) §1–§8. Fase actual: **7 —
+Reportes y endurecimiento**; backend completo y frontend pendiente (1.4, 2.4, 3.3–3.4, 4.5–4.6, 5.3,
+6.4), al igual que la disponibilidad 2.5 (HU 3.3–3.4), el clima 5.7 y las pruebas de carga 7.3
+([`docs/ROADMAP.md`](docs/ROADMAP.md)).
 
 ## Leer antes de codificar
 
@@ -25,6 +27,7 @@ pendientes, al igual que la disponibilidad 2.5 ([`docs/ROADMAP.md`](docs/ROADMAP
 5. [`docs/ROADMAP.md`](docs/ROADMAP.md) — fase actual y siguiente rebanada.
 6. [`docs/BACKEND.md`](docs/BACKEND.md) — mapa real de controllers, endpoints, auth y conexión del frontend.
 7. [`docs/AI.md`](docs/AI.md) — configuración de Gemini, prompt de negocio y grounding al catálogo.
+8. [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — Supabase, migraciones, seed, Vercel y variables.
 
 Si el código contradice estos docs, gana el código ejecutable: actualiza el doc en el mismo cambio.
 
@@ -67,16 +70,20 @@ npm run db:seed -w backend
 
 - **Implementado:** scaffold del monorepo, `config/env.ts` con Zod, logger pino con redacción,
   `errorHandler` problem+json, `/health`, `/health/ready`, Prisma schema completo + migraciones
-  `0001_init`, `0002_catalog_search` y `0003_trip_request_adults_nullable` generadas, seed de admin y
-  catálogo de Colombia, login, refresh rotativo con detección de reuso, logout, `/auth/me`, RBAC,
-  `POST /users` (solo `ADMIN`), catálogo completo (`destinations`, `hotels`, `activities`,
-  `transport`) con lectura autenticada, escritura `ADMIN` y soft delete, e intake conversacional
-  (`TripRequest`, parser determinista, preguntas/respuestas, listado y ownership).
-- **Tests:** 88 de backend + 6 de `packages/shared`, con fakes (sin DB ni red).
+  `0001_init`, `0002_catalog_search`, `0003_trip_request_adults_nullable` y
+  `0004_plan_saved_margin_image` generadas, seed de admin y catálogo de Colombia, login, refresh
+  rotativo con detección de reuso, logout, `/auth/me`, RBAC, `POST /users` (solo `ADMIN`), catálogo
+  completo (`destinations`, `hotels`, `activities`, `transport`) con lectura autenticada, escritura
+  `ADMIN` y soft delete, intake conversacional (`TripRequest`, parser determinista, preguntas/respuestas,
+  listado y ownership), generación con IA (`mock` + Gemini REST, `ai_jobs`, runner in-process), planes
+  (lectura, edición de metadatos e ítems, alternativas, presupuesto), ciclo de vida (`SAVED`, publicar,
+  archivar, duplicar), dashboard API y reportes JSON/CSV + PDF.
+- **Tests:** 124 de backend + 6 de `packages/shared`, con fakes (sin DB ni red).
 - **Pendiente inmediato:** aplicar las migraciones y el seed cuando existan credenciales reales de
-  Supabase; el frontend de las rebanadas 1.4, 2.4 y 3.3–3.4; el modelo de disponibilidad (2.5); después,
-  Fase 4 (generación con IA).
+  Supabase; el frontend de las rebanadas 1.4, 2.4, 3.3–3.4, 4.5–4.6, 5.3 y 6.4; el modelo de
+  disponibilidad (2.5), el clima (5.7) y las pruebas de carga (7.3).
 - **Contrato de conexión:** [`docs/BACKEND.md`](docs/BACKEND.md). **IA:** [`docs/AI.md`](docs/AI.md).
+  **Despliegue:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## Estructura y regla de dependencia
 
@@ -108,8 +115,9 @@ packages/shared/   # esquemas Zod + tipos de contrato (fuente única)
   El servidor valida el ID contra el shortlist y recalcula todo desde la BD.
 - Un `Plan` nace `DRAFT`; `SAVED` es editable y `PUBLISHED` es de solo lectura (duplicar para editar).
   Un plan = una moneda; `marginPercent` está entre 0 y 100.
-- Ningún ítem entra al plan si no está disponible para las fechas; la validación es server-side y
-  nunca se sobrevende.
+- Cuando exista el modelo de disponibilidad (2.5), ningún ítem entra al plan si no está disponible
+  para las fechas; la validación es server-side y nunca se sobrevende. Hoy el shortlist solo filtra por
+  `isActive` y moneda: no implementes 2.5 sin la decisión de producto.
 - `TripRequest` y `Plan` son agregados separados con estados separados (ver `docs/DOMAIN.md`).
   Los estados "pensando"/"consultando APIs" son de UI, no se persisten.
 - Ownership en el caso de uso: `ADVISOR` solo ve lo suyo; `ADMIN` ve todo. No confiar en el `advisorId`

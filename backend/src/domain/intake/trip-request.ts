@@ -24,6 +24,8 @@ export interface TripRequestProps {
   slots: TripRequestSlots;
   extractedSlots: Record<string, unknown>;
   missingFields: MissingField[];
+  /** Derived from the plan relation on reads; never stored on trip_requests. */
+  planId?: string | null;
   errorCode: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -275,7 +277,11 @@ export class TripRequest {
   }
 
   withAnswers(changes: Partial<TripRequestSlots>, now: Date): TripRequest {
-    if (this.status !== 'AWAITING_INPUT' && this.status !== 'READY') {
+    if (
+      this.status !== 'AWAITING_INPUT' &&
+      this.status !== 'READY' &&
+      this.status !== 'FAILED'
+    ) {
       throw new ConflictError(
         'La solicitud no admite respuestas en su estado actual',
         'CONFLICT',
@@ -300,6 +306,47 @@ export class TripRequest {
       slots,
       missingFields,
       status: statusFor(missingFields),
+      errorCode: null,
+      updatedAt: now,
+    });
+  }
+
+  markGenerating(now: Date): TripRequest {
+    if (this.status !== 'READY' && this.status !== 'FAILED') {
+      throw new ConflictError(
+        'La solicitud debe estar READY (o FAILED para reintentar) antes de generar',
+        'CONFLICT',
+      );
+    }
+    return new TripRequest({
+      ...this.props,
+      status: 'GENERATING',
+      errorCode: null,
+      updatedAt: now,
+    });
+  }
+
+  markGenerated(planId: string, now: Date): TripRequest {
+    if (this.status !== 'GENERATING') {
+      throw new ConflictError('La solicitud no está generando un plan', 'CONFLICT');
+    }
+    return new TripRequest({
+      ...this.props,
+      status: 'GENERATED',
+      planId,
+      errorCode: null,
+      updatedAt: now,
+    });
+  }
+
+  markFailed(errorCode: string, now: Date): TripRequest {
+    if (this.status !== 'GENERATING') {
+      throw new ConflictError('La solicitud no está generando un plan', 'CONFLICT');
+    }
+    return new TripRequest({
+      ...this.props,
+      status: 'FAILED',
+      errorCode,
       updatedAt: now,
     });
   }
@@ -332,6 +379,10 @@ export class TripRequest {
     return this.props.missingFields;
   }
 
+  get planId(): string | null {
+    return this.props.planId ?? null;
+  }
+
   get errorCode(): string | null {
     return this.props.errorCode;
   }
@@ -350,5 +401,9 @@ export class TripRequest {
 
   get isReady(): boolean {
     return this.status === 'READY';
+  }
+
+  get canGenerate(): boolean {
+    return this.status === 'READY' || this.status === 'FAILED';
   }
 }

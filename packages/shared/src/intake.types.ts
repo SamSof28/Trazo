@@ -48,6 +48,8 @@ export interface TripRequestDto {
   slots: TripRequestSlotsDto;
   missingFields: MissingField[];
   questions: IntakeQuestion[];
+  /** Set once generation succeeds; null while the request has no plan. */
+  planId: string | null;
   errorCode: string | null;
   createdAt: string;
   updatedAt: string;
