@@ -23,6 +23,10 @@ import { ListTransportOptionsUseCase } from '../application/catalog/list-transpo
 import { CreateTransportOptionUseCase } from '../application/catalog/create-transport-option.use-case.js';
 import { UpdateTransportOptionUseCase } from '../application/catalog/update-transport-option.use-case.js';
 import { DeactivateTransportOptionUseCase } from '../application/catalog/deactivate-transport-option.use-case.js';
+import { CreateTripRequestUseCase } from '../application/intake/create-trip-request.use-case.js';
+import { GetTripRequestUseCase } from '../application/intake/get-trip-request.use-case.js';
+import { ListTripRequestsUseCase } from '../application/intake/list-trip-requests.use-case.js';
+import { AnswerTripRequestUseCase } from '../application/intake/answer-trip-request.use-case.js';
 import { Argon2PasswordHasher } from '../infrastructure/security/argon2-password-hasher.js';
 import { JwtAccessTokenService } from '../infrastructure/security/jwt-access-token.service.js';
 import { RandomTokenGenerator } from '../infrastructure/security/random-token.generator.js';
@@ -34,12 +38,14 @@ import { PrismaDestinationRepository } from '../infrastructure/persistence/prism
 import { PrismaHotelRepository } from '../infrastructure/persistence/prisma/hotel.repository.js';
 import { PrismaActivityRepository } from '../infrastructure/persistence/prisma/activity.repository.js';
 import { PrismaTransportOptionRepository } from '../infrastructure/persistence/prisma/transport-option.repository.js';
+import { PrismaTripRequestRepository } from '../infrastructure/persistence/prisma/trip-request.repository.js';
 import { AuthController } from '../interfaces/http/auth.controller.js';
 import { UserController } from '../interfaces/http/user.controller.js';
 import { DestinationController } from '../interfaces/http/destination.controller.js';
 import { HotelController } from '../interfaces/http/hotel.controller.js';
 import { ActivityController } from '../interfaces/http/activity.controller.js';
 import { TransportController } from '../interfaces/http/transport.controller.js';
+import { TripRequestController } from '../interfaces/http/trip-request.controller.js';
 import type { AppDependencies } from '../app.js';
 
 export interface Container extends AppDependencies {
@@ -54,6 +60,7 @@ export function buildContainer(): Container {
   const hotels = new PrismaHotelRepository(prisma);
   const activities = new PrismaActivityRepository(prisma);
   const transportOptions = new PrismaTransportOptionRepository(prisma);
+  const tripRequests = new PrismaTripRequestRepository(prisma);
   const hasher = new Argon2PasswordHasher();
   const tokens = new RandomTokenGenerator();
   const clock = new SystemClock();
@@ -108,6 +115,12 @@ export function buildContainer(): Container {
     new UpdateTransportOptionUseCase(transportOptions, destinations, clock),
     new DeactivateTransportOptionUseCase(transportOptions, clock),
   );
+  const tripRequestController = new TripRequestController(
+    new CreateTripRequestUseCase(tripRequests, destinations, clock),
+    new GetTripRequestUseCase(tripRequests, destinations),
+    new ListTripRequestsUseCase(tripRequests, destinations),
+    new AnswerTripRequestUseCase(tripRequests, destinations, clock),
+  );
 
   return {
     prisma,
@@ -118,6 +131,7 @@ export function buildContainer(): Container {
     hotelController,
     activityController,
     transportController,
+    tripRequestController,
     healthCheck: async () => {
       try {
         await prisma.$queryRaw`SELECT 1`;

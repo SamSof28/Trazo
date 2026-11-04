@@ -4,4 +4,6 @@ export * from './catalog.schemas.js';
 export * from './catalog.types.js';
 export * from './common.js';
 export * from './errors.js';
+export * from './intake.schemas.js';
+export * from './intake.types.js';
 export * from './money.js';

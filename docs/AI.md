@@ -3,6 +3,11 @@
 > **Estado:** la configuración de entorno ya existe y se valida al arrancar, pero el adaptador de IA
 > todavía **no está implementado**. Corresponde a la Fase 4 del [`ROADMAP.md`](ROADMAP.md). Hoy la app
 > funciona con `AI_PROVIDER=mock` (sin red) y el resto del backend no depende de Gemini.
+>
+> **Fase 3 (implementada):** el intake conversacional **no llama a Gemini**. Usa el parser determinista
+> `backend/src/application/intake/prompt-parser.ts`, que extrae destino, fechas/duración, viajeros,
+> presupuesto e intereses contra el catálogo activo. La IA solo entrará en la Fase 4 para ambigüedad y
+> generación del itinerario, siempre con grounding por `catalogItemId`.
 
 Este documento define cómo se conectará el modelo, qué información recibe y qué se le prohíbe. Es el
 contrato para implementar `AiPlannerPort` sin convertir la IA en una fuente de precios o de datos
@@ -318,8 +323,9 @@ Adaptador `mock` (`backend/src/infrastructure/ai/mock-planner.ts`):
 6. `ai_jobs` + worker in-process + `POST /trip-requests/:id/generate` (202) + polling.
 7. Métricas y logs; prueba de timeout y de ID inválido.
 
-No se implementa nada de esto hasta cerrar la Fase 2 (catálogo) y la Fase 3 (intake), porque el
-shortlist y los slots son sus entradas.
+No se implementa nada de esto hasta cerrar la Fase 3 (intake), porque el shortlist y los slots son sus
+entradas. El backend de la Fase 3 ya está cerrado; las rebanadas 3.3–3.4 son de frontend y no bloquean
+el adaptador, pero sí la demo completa.
 
 ---
 

@@ -79,7 +79,7 @@ destinos activos. La migración `0002_catalog_search` crea `pg_trgm`, los índic
 índice de rutas de transporte.
 
 
-### planning
+### intake
 
 **trip_requests**
 
@@ -95,7 +95,7 @@ destinos activos. La migración `0002_catalog_search` crea `pg_trgm`, los índic
 | `start_date` | date | nullable |
 | `end_date` | date | nullable |
 | `duration_days` | smallint | 1–30 |
-| `adults` | smallint | ≥ 1 |
+| `adults` | smallint | nullable mientras no se conozca el número; ≥ 1 cuando existe |
 | `children` | smallint | ≥ 0 |
 | `traveler_type` | enum | `SOLO`\|`COUPLE`\|`FAMILY`\|`FRIENDS`\|`BUSINESS` |
 | `interests` | text[] | p. ej. `playa`, `cultura`, `aventura` |
@@ -105,6 +105,23 @@ destinos activos. La migración `0002_catalog_search` crea `pg_trgm`, los índic
 | `error_code` | text | nullable, solo en `FAILED` |
 
 Regla: `start_date`/`end_date` y `duration_days` son consistentes (`end = start + duration - 1`).
+`adults` es nullable a propósito: una solicitud creada solo con el prompt no debe parecer completa al
+releerla. La migración `0003_trip_request_adults_nullable` elimina el `NOT NULL DEFAULT 1` anterior y
+actualiza el CHECK para permitir `NULL`. `children` sigue con default `0`.
+
+Estados de `TripRequest`: `create` nace en `AWAITING_INPUT` si falta algún slot requerido y en `READY`
+si están todos; `withAnswers` permite refinar incluso un `READY` y recalcula `missing_fields`.
+`COLLECTING`, `GENERATING`, `GENERATED` y `FAILED` quedan para la generación asíncrona de la Fase 4.
+
+Bandas de presupuesto por persona (COP, persistidas en unidades menores):
+
+| Banda | Rango |
+|---|---|
+| `LOW` | 0 – 2.000.000 |
+| `MEDIUM` | 2.000.000 – 5.000.000 |
+| `HIGH` | 5.000.000 o más (sin máximo) |
+
+### planning
 
 **plans**
 
@@ -115,13 +132,13 @@ Regla: `start_date`/`end_date` y `duration_days` son consistentes (`end = start 
 | `advisor_id` | uuid FK | copiado de la solicitud |
 | `destination_id` | uuid FK | destino principal |
 | `title` | text | requerido para publicar (3–120) |
-| `status` | enum | `DRAFT`\|`PUBLISHED`\|`ARCHIVED` |
+| `status` | enum | `DRAFT`\|`SAVED`\|`PUBLISHED`\|`ARCHIVED`; `SAVED` se agrega en Fase 6 |
 | `summary` | text | resumen ejecutivo generado/editable |
 | `hero_image_url` | text | |
 | `tags` | text[] | intereses detectados |
 | `currency` | char(3) | una sola por plan |
 | `subtotal_minor` | bigint | suma de ítems |
-| `margin_percent` | numeric(5,2) | 0–50, default de la agencia |
+| `margin_percent` | numeric(5,2) | 0–100 (el CHECK actual es 0–50; se amplía en Fase 5) |
 | `margin_minor` | bigint | calculado |
 | `total_minor` | bigint | `subtotal + margin` |
 | `version` | integer | incrementa al duplicar |
@@ -181,6 +198,10 @@ erDiagram
 | INV-14 | `fromPrice` es derivado (hotel activo más económico en COP); nunca se persiste. |
 | INV-15 | `transport_options.pricing_unit` es compatible con `mode`; origen y destino son distintos. |
 | INV-16 | Desactivar catálogo es soft delete; nunca se borran filas referenciadas por `plan_items`. |
+| INV-17 | Un ítem solo entra al plan si está disponible para las fechas; la validación es server-side y no se sobrevende. |
+| INV-18 | `day.subtotal` es la suma de sus ítems y `plan.subtotal` la suma de los días; el cliente nunca envía totales. |
+| INV-19 | `margin_percent` está entre 0 y 100; `margin` y `total` se recalculan en el servidor. |
+| INV-20 | `SAVED` es editable; `PUBLISHED` es inmutable y se duplica para editar. |
 
 ## 5. Cálculo de presupuesto
 
@@ -203,23 +224,39 @@ plan.total      = plan.subtotal + plan.margin
 
 ## 6. Intake: slots y preguntas
 
-Orden de resolución (determinista primero, IA solo para ambigüedad):
+La Fase 3 resuelve los slots con un **parser determinista** (`application/intake/prompt-parser.ts`).
+No llama a la IA: normaliza el texto (minúsculas, sin tildes), busca el destino contra el catálogo
+activo y extrae fechas, duración, viajeros, presupuesto e intereses. Un destino desconocido (p. ej.
+"París" en un catálogo de Colombia) queda como slot pendiente; **nunca se inventa**.
 
-1. `destination` — match contra `destinations.city/slug` (trigram).
-2. `duration` — fechas explícitas o "N días"; si solo hay fechas, derivar días.
-3. `travelers` — "2 adultos", "pareja", "familia con 2 niños".
-4. `budget` — rango explícito o banda (`LOW`/`MEDIUM`/`HIGH`) → min/max en moneda del destino.
-5. `interests` — tags del catálogo; opcional, default según `traveler_type`.
+Orden de resolución:
+
+1. `destination` — match exacto o por alias contra `destinations.city/slug`; "Sorpréndenos" resuelve
+   al primer destino destacado activo.
+2. `duration` — fechas explícitas, "N días", "N noches" (+1), semanas, "fin de semana" (3 días) o
+   rango de fechas; si solo hay fechas, se derivan los días inclusivos.
+3. `travelers` — "2 adultos", "pareja", "familia con 2 niños", "4 amigos", "viajo solo".
+4. `budget` — rango explícito, monto único o banda (`LOW`/`MEDIUM`/`HIGH`) en COP por persona.
+5. `interests` — tags del catálogo; opcional. No bloquea `READY` y no se pregunta en el turno.
 
 | Slot faltante | Pregunta | Chips |
 |---|---|---|
-| `destination` | ¿A dónde quieren viajar? | Cartagena y playa · Eje Cafetero · Sorpréndenos |
+| `destination` | ¿A dónde quieren viajar? | 3 destinos destacados activos · Sorpréndenos |
 | `duration` | ¿Cuántos días y en qué fechas? | Fin de semana · 5 días · 10 días |
-| `travelers` | ¿Quiénes viajan? | Pareja · Familia · Amigos · Solo |
+| `travelers` | ¿Quiénes viajan? | Solo · Pareja · Familia con 2 niños · 4 amigos |
 | `budget` | ¿Qué presupuesto manejan por persona? | Económico · Medio · Premium |
-| `interests` | ¿Qué tipo de experiencia buscan? | Playa · Cultura · Aventura · Gastronomía |
 
-Máximo 2 preguntas por turno. `Sorpréndenos` resuelve destino con el top de destinos activos.
+Reglas:
+
+- Máximo 2 preguntas por turno; el orden es `destination → duration → travelers → budget`.
+- Las respuestas se envían como `{ field, value }` con `field` en
+  `destination|duration|travelers|budget`; el valor es texto libre y lo vuelve a interpretar el parser.
+- Un valor inválido responde `422` con `errors[].field`; un destino fuera del catálogo no se acepta.
+- Se puede refinar un `TripRequest` en `READY`; `withAnswers` recalcula `missingFields` y el estado.
+- `COLLECTING` existe en el enum pero la creación usa `AWAITING_INPUT` o `READY`; la generación
+  asíncrona (Fase 4) usará `GENERATING|GENERATED|FAILED`.
+- El clima (HU 2.6) y la disponibilidad (HU 3.3–3.4) son datos de apoyo: no cambian los slots ni los
+  precios por sí solos.
 
 ## 7. Alternativas
 
@@ -227,4 +264,4 @@ Máximo 2 preguntas por turno. `Sorpréndenos` resuelve destino con el top de de
 - Se ordenan por cercanía al precio actual y se devuelven 3.
 - Al elegir: se actualiza la FK, el snapshot de nombre/precio, `quantity` si aplica, y se recalcula el
   plan completo dentro de una transacción corta.
-- El plan debe estar `DRAFT`; si está `PUBLISHED`, responder `409 CONFLICT`.
+- El plan debe estar `DRAFT` o `SAVED`; si está `PUBLISHED` o `ARCHIVED`, responder `409 CONFLICT`.

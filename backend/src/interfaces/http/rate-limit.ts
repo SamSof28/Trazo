@@ -40,3 +40,10 @@ export const refreshLimiter = rateLimit({
   windowMs: 60_000,
   limit: 30,
 });
+
+export const tripRequestLimiter = rateLimit({
+  ...common,
+  windowMs: 60 * 60_000,
+  limit: 20,
+  keyGenerator: (req) => req.auth?.userId ?? req.ip ?? 'unknown',
+});

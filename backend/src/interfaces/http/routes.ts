@@ -1,16 +1,20 @@
 import { Router } from 'express';
 import {
+  answerTripRequestSchema,
   catalogIdParamsSchema,
   createActivitySchema,
   createDestinationSchema,
   createHotelSchema,
   createTransportOptionSchema,
+  createTripRequestSchema,
   createUserSchema,
   listActivitiesQuerySchema,
   listDestinationsQuerySchema,
   listHotelsQuerySchema,
   listTransportQuerySchema,
+  listTripRequestsQuerySchema,
   loginSchema,
+  tripRequestIdParamsSchema,
   updateActivitySchema,
   updateDestinationSchema,
   updateHotelSchema,
@@ -22,10 +26,11 @@ import type { AuthController } from './auth.controller.js';
 import type { DestinationController } from './destination.controller.js';
 import type { HotelController } from './hotel.controller.js';
 import type { TransportController } from './transport.controller.js';
+import type { TripRequestController } from './trip-request.controller.js';
 import type { UserController } from './user.controller.js';
 import { requireAuth, requireRole } from './middleware/auth.js';
 import { validateBody, validateParams, validateQuery } from './middleware/validate.js';
-import { loginLimiter, refreshLimiter } from './rate-limit.js';
+import { loginLimiter, refreshLimiter, tripRequestLimiter } from './rate-limit.js';
 
 export interface ApiRouterDependencies {
   authController: AuthController;
@@ -34,6 +39,7 @@ export interface ApiRouterDependencies {
   hotelController: HotelController;
   activityController: ActivityController;
   transportController: TransportController;
+  tripRequestController: TripRequestController;
   accessTokens: AccessTokenService;
 }
 
@@ -169,6 +175,33 @@ export function createApiRouter(deps: ApiRouterDependencies): Router {
     admin,
     validateParams(catalogIdParamsSchema),
     deps.transportController.remove,
+  );
+
+  router.get(
+    '/trip-requests',
+    auth,
+    validateQuery(listTripRequestsQuerySchema),
+    deps.tripRequestController.list,
+  );
+  router.post(
+    '/trip-requests',
+    auth,
+    tripRequestLimiter,
+    validateBody(createTripRequestSchema),
+    deps.tripRequestController.create,
+  );
+  router.get(
+    '/trip-requests/:id',
+    auth,
+    validateParams(tripRequestIdParamsSchema),
+    deps.tripRequestController.get,
+  );
+  router.post(
+    '/trip-requests/:id/answers',
+    auth,
+    validateParams(tripRequestIdParamsSchema),
+    validateBody(answerTripRequestSchema),
+    deps.tripRequestController.answer,
   );
 
   return router;

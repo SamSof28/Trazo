@@ -1,5 +1,8 @@
 import type { Role } from '@turiviaje/shared';
+import type { Clock } from '../shared/clock.js';
 import type { User } from './user.js';
+
+export type { Clock };
 
 export interface AccessTokenPayload {
   userId: string;
@@ -71,8 +74,4 @@ export interface RefreshTokenRepository {
 export interface TokenGenerator {
   generate(): string;
   hash(token: string): string;
-}
-
-export interface Clock {
-  now(): Date;
 }

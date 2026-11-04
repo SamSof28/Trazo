@@ -2,7 +2,7 @@ import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { ZodError } from 'zod';
 import type { ProblemDetails } from '@turiviaje/shared';
 import { logger } from '../../../config/logger.js';
-import { AppError } from '../../../domain/shared/app-error.js';
+import { AppError, ValidationError } from '../../../domain/shared/app-error.js';
 
 function requestIdOf(req: Parameters<ErrorRequestHandler>[1]): string | undefined {
   const id = (req as { id?: unknown }).id;
@@ -57,7 +57,16 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   }
 
   if (error instanceof AppError) {
-    const body = problem(error.status, error.code, error.title, requestId, error.detail);
+    const body = problem(
+      error.status,
+      error.code,
+      error.title,
+      requestId,
+      error.detail,
+      error instanceof ValidationError && error.field
+        ? [{ field: error.field, message: error.detail ?? error.title }]
+        : undefined,
+    );
     res.status(error.status).type('application/problem+json').json(body);
     return;
   }

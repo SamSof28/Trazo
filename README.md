@@ -7,11 +7,11 @@ actividades, transporte, itinerario por días, presupuesto y ficha publicable).
 La experiencia se inspira en [layla.ai](https://layla.ai/es): sin formularios de búsqueda, un único
 *super prompt*, y después un panel dividido (chat a la izquierda, resultados y mapa a la derecha).
 
-> **Estado:** los backends de las fases 0, 1 y 2 ya están implementados (monorepo, configuración
-> validada, identidad, RBAC, catálogo y tests). El frontend y los módulos de intake y planificación
-> aún no existen. Este README y `AGENTS.md` son la fuente de verdad del producto y del dominio;
-> `docs/` contiene arquitectura, contrato de API, modelo de datos, mapa del backend, IA y hoja de
-> ruta. Léelos antes de escribir código.
+> **Estado:** los backends de las fases 0, 1, 2 y 3 ya están implementados (monorepo, configuración
+> validada, identidad, RBAC, catálogo, intake conversacional determinista y tests). El frontend y los
+> módulos de planificación/IA aún no existen. Este README y `AGENTS.md` son la fuente de verdad del
+> producto y del dominio; `docs/` contiene arquitectura, contrato de API, modelo de datos, mapa del
+> backend, IA y hoja de ruta. Léelos antes de escribir código.
 
 ---
 
@@ -298,6 +298,13 @@ flowchart TD
 - **HU 1.2 Completitud dinámica.** Si el prompt no trae destino, fechas/duración, viajeros,
   presupuesto o intereses, el sistema pasa a chat y pregunta **solo lo que falta**, con opciones
   seleccionables. Nunca falla por un prompt incompleto.
+- **HU 1.3 Refinamiento conversacional.** Después de generar el plan, el asesor puede escribir
+  cambios en lenguaje natural ("cambia el hotel por uno más económico", "agrega una actividad de
+  playa", "súbelo a 5 días"). El sistema interpreta la intención, propone el cambio y lo aplica al
+  plan editable recalculando el presupuesto en el servidor.
+- **HU 1.4 Progreso por etapas.** Mientras se genera o refina el plan, la UI muestra etapas claras
+  ("Interpretando tu solicitud", "Consultando el catálogo", "Armando el itinerario", "Calculando el
+  presupuesto"). Son estados de presentación: no se persisten ni sustituyen el estado real del plan.
 
 ### Épica 2 — Visualización y refinamiento
 
@@ -307,6 +314,20 @@ flowchart TD
   imagen/ícono; alojamiento y transporte se distinguen visualmente de las actividades.
 - **HU 2.3 Alternativas.** "Cambiar" en un ítem abre 3 alternativas del catálogo; al elegir, el
   presupuesto se recalcula en el servidor y la UI se actualiza.
+- **HU 2.4 Subtotal por día.** Cada día del timeline muestra su subtotal y el resumen del plan suma
+  los subtotales diarios. El servidor es la única fuente de verdad de esos montos.
+- **HU 2.5 Edición manual de ítems.** El asesor puede agregar, quitar, reordenar y ajustar horarios o
+  cantidades de los ítems sin depender de la IA. Toda edición pasa por el servidor y recalcula el
+  presupuesto y el itinerario.
+- **HU 2.6 Clima del destino.** El plan muestra el pronóstico por día para el destino y las fechas
+  elegidas. Es información de apoyo: no altera precios, disponibilidad ni el itinerario.
+- **HU 2.7 Estado "Guardado" editable.** Al guardar, el plan queda en estado `SAVED` y puede
+  reabrirse y editarse. `PUBLISHED` sigue siendo de solo lectura; para editar un plan publicado se
+  duplica.
+- **HU 2.8 Exportación PDF.** El asesor descarga el plan como PDF con portada, itinerario por días,
+  ítems, totales y notas. El PDF es una proyección del plan persistido, nunca una fuente de datos.
+- **HU 2.9 Margen 0–100.** El asesor ajusta el margen de agencia entre 0 y 100 %. El servidor
+  recalcula `margin` y `total`; el cliente nunca envía totales.
 
 ### Épica 3 — Datos e integración
 
@@ -314,6 +335,12 @@ flowchart TD
   se toman de la base, no del texto del modelo.
 - **HU 3.2 Guardado y publicación.** Título comercial obligatorio, persistencia relacional con IDs
   de destino/hotel/actividades/transporte, y dashboard con filtros y reapertura.
+- **HU 3.3 Explorador de catálogo con disponibilidad.** El asesor navega destinos, hoteles,
+  actividades y transporte, y ve si cada ítem está disponible para las fechas del viaje antes de
+  agregarlo o pedir una generación.
+- **HU 3.4 Validación de disponibilidad.** Antes de generar o confirmar un plan, el servidor valida
+  la disponibilidad de cada ítem. Un ítem no disponible se rechaza o se sustituye por una
+  alternativa; nunca se sobrevende ni se inventa cupo.
 
 Criterios de aceptación detallados por historia: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
@@ -327,6 +354,9 @@ Criterios de aceptación detallados por historia: [`docs/ROADMAP.md`](docs/ROADM
    de uso, no solo en la ruta.
 5. **Publicación:** requiere título comercial y al menos un día con ítems; `PUBLISHED` es inmutable.
 6. **Moneda:** un plan tiene una sola moneda; no se mezclan COP y USD en el mismo plan.
+7. **Disponibilidad:** ningún ítem entra al plan si no está disponible para las fechas; la validación
+   es del servidor y nunca se sobrevende.
+8. **Margen:** el asesor lo configura entre 0 y 100 %; el servidor recalcula `margin` y `total`.
 
 ## 10. Documentación
 
@@ -336,6 +366,8 @@ Criterios de aceptación detallados por historia: [`docs/ROADMAP.md`](docs/ROADM
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Capas, módulos, seguridad, IA, configuración |
 | [`docs/DOMAIN.md`](docs/DOMAIN.md) | Modelo de datos, invariantes, cálculo de presupuesto |
 | [`docs/API.md`](docs/API.md) | Contrato REST, errores, paginación, RBAC |
+| [`docs/BACKEND.md`](docs/BACKEND.md) | Mapa real de controllers, endpoints, Supabase y consumo desde el frontend |
+| [`docs/AI.md`](docs/AI.md) | Configuración de Gemini, prompt de negocio y grounding al catálogo |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Fases incrementales y definición de terminado |
 
 ## 11. Cómo se construye

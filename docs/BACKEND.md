@@ -1,9 +1,9 @@
 # Backend — mapa de implementación y conexión
 
-> **Estado:** Fase 0, backend de Fase 1 y backend de Fase 2 (catálogo) completos. El frontend
-> (rebanadas 1.4 y 2.4) y los módulos de intake, generación, edición y publicación todavía no
-> existen. Este documento describe lo que **ya está implementado** y el patrón exacto para agregar lo
-> que sigue.
+> **Estado:** Fase 0 y los backends de Fase 1 (identidad), Fase 2 (catálogo) y Fase 3 (intake
+> conversacional) están completos. El frontend (rebanadas 1.4, 2.4 y 3.3–3.4) y los módulos de
+> generación, edición y publicación todavía no existen. Este documento describe lo que **ya está
+> implementado** y el patrón exacto para agregar lo que sigue.
 
 Documentos relacionados: [`API.md`](API.md) (contrato REST), [`ARCHITECTURE.md`](ARCHITECTURE.md)
 (capas y seguridad), [`DOMAIN.md`](DOMAIN.md) (modelo de datos), [`AI.md`](AI.md) (Gemini y grounding).
@@ -22,10 +22,14 @@ cp .env.example backend/.env
 # Edita backend/.env con tus credenciales reales.
 
 npm run db:generate -w backend   # genera el cliente Prisma
-npm run db:migrate -w backend    # aplica migraciones con DIRECT_URL
-npm run db:seed -w backend       # crea/actualiza el usuario ADMIN
+npm run db:deploy -w backend     # aplica migraciones con DIRECT_URL (Supabase)
+npm run db:seed -w backend       # crea/actualiza el ADMIN y el catálogo
 npm run dev -w backend           # API en http://localhost:3000
 ```
+
+> En desarrollo local con una base vacía puedes usar `npm run db:migrate -w backend`; ese comando
+> crea una *shadow database* y no es el adecuado para Supabase. Para Supabase usa siempre
+> `db:deploy`.
 
 Comprobación rápida:
 
@@ -41,6 +45,82 @@ curl -i http://localhost:3000/health/ready
 > **Supabase:** `DATABASE_URL` debe apuntar al pooler (`:6543`, `?pgbouncer=true`) y `DIRECT_URL` a la
 > conexión directa (`:5432`). Mezclarlos produce errores de *prepared statements*. El seed y las
 > migraciones usan `DIRECT_URL`.
+
+### 1.1 Configurar Supabase paso a paso
+
+1. **Crear el proyecto.** En [supabase.com/dashboard](https://supabase.com/dashboard) → *New project*.
+   Elige organización, nombre, región (la más cercana a los usuarios; p. ej. `us-east-1` o
+   `sa-east-1`) y una contraseña de base de datos fuerte. Guárdala: la necesitarás en las URLs.
+2. **Obtener las cadenas de conexión.** *Project Settings* → *Database* → *Connection string* →
+   pestaña **URI**. Supabase ofrece varias; usa dos:
+   - **Transaction pooler** (runtime): host `aws-0-<region>.pooler.supabase.com`, puerto `6543`.
+     Añade `?pgbouncer=true` (y `&schema=public` si lo necesitas). Es la que va en `DATABASE_URL`.
+   - **Direct connection** (migraciones/seed): host `db.<ref>.supabase.co`, puerto `5432`. Es la que
+     va en `DIRECT_URL`.
+   - Si tu red no tiene IPv6 y la conexión directa no responde, usa el **Session pooler** (mismo host
+     `pooler.supabase.com`, puerto `5432`) como `DIRECT_URL`; sirve para migraciones y no necesita
+     `pgbouncer=true`.
+3. **Codificar la contraseña.** Si contiene `@`, `#`, `/`, `:` o `%`, reemplázala por su valor
+   percent-encoded (`@` → `%40`, `#` → `%23`, `/` → `%2F`). Una contraseña sin codificar es la causa
+   más común de `P1001`/`P1010`.
+4. **Editar `backend/.env`.**
+
+   ```dotenv
+   DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true"
+   DIRECT_URL="postgresql://postgres:<password>@db.<ref>.supabase.co:5432/postgres"
+   JWT_ACCESS_SECRET="<openssl rand -base64 48>"
+   ADMIN_EMAIL="admin@turiviaje.co"
+   ADMIN_PASSWORD="<mínimo 12 caracteres>"
+   ```
+
+   `JWT_ACCESS_SECRET` es obligatorio (≥ 32 caracteres); genéralo con
+   `openssl rand -base64 48`. No commitees `backend/.env`.
+5. **Generar el cliente y aplicar migraciones.**
+
+   ```bash
+   npm run db:generate -w backend
+   npm run db:deploy -w backend
+   ```
+
+   `db:deploy` ejecuta `prisma migrate deploy` contra `DIRECT_URL` y aplica, en orden,
+   `0001_init`, `0002_catalog_search` y `0003_trip_request_adults_nullable`. No uses
+   `db:migrate` contra Supabase: crea una *shadow database* y falla en planes gratuitos.
+6. **Sembrar admin y catálogo.**
+
+   ```bash
+   npm run db:seed -w backend
+   ```
+
+   El seed es idempotente: crea/actualiza el `ADMIN` con `ADMIN_EMAIL`/`ADMIN_PASSWORD` y carga los
+   destinos, hoteles, actividades y transporte de Colombia. Se conecta con `DIRECT_URL`.
+7. **Verificar.**
+
+   ```bash
+   npm run dev -w backend
+   curl -i http://localhost:3000/health/ready
+   ```
+
+   Debe responder `200 { "status": "ready" }`. En Supabase, *Table Editor* debe mostrar `users`,
+   `destinations`, `hotels`, `activities`, `transport_options` y `trip_requests`; en *SQL Editor*,
+   `select count(*) from destinations;` debe devolver al menos 5.
+8. **Probar el login.** Usa el `ADMIN_EMAIL`/`ADMIN_PASSWORD` del seed contra
+   `POST /api/v1/auth/login`. Si responde `401`, revisa que el seed haya corrido y que el hash esté
+   en `users.password_hash`.
+
+**Solución de problemas frecuentes**
+
+| Síntoma | Causa probable | Acción |
+|---|---|---|
+| `P1001: Can't reach database server` | IPv6, región incorrecta o URL mal formada | Usa *Session pooler* en `DIRECT_URL`, verifica host/puerto y codifica la contraseña |
+| `prepared statement "s0" already exists` | Runtime usando conexión directa o pooler sin `pgbouncer=true` | `DATABASE_URL` en `:6543` + `?pgbouncer=true` |
+| `P3005: database schema is not empty` | `migrate dev` sobre una base con tablas | Usa `db:deploy`; no borres tablas en una base compartida |
+| `P1010: User was denied access` | Contraseña incorrecta o sin percent-encoding | Restablece la contraseña en Supabase y codifícala |
+| `db:seed` falla por `ADMIN_PASSWORD` | Falta la variable o tiene < 12 caracteres | Configúrala en `backend/.env` |
+| Migración lenta o timeout | Pooler en modo transaction para DDL | Usa la conexión directa o el *Session pooler* en `DIRECT_URL` |
+
+> **Seguridad:** el backend se conecta como el usuario `postgres` del proyecto; no se usa
+> `service_role` en el frontend ni se exponen las URLs de base de datos al SPA. RLS no se usa porque
+> toda la autorización vive en los casos de uso (JWT + ownership).
 
 ### Variables de entorno
 
@@ -79,6 +159,7 @@ backend/
     schema.prisma                 # modelo completo del dominio
     migrations/0001_init/         # migración inicial + CHECK constraints
     migrations/0002_catalog_search/ # pg_trgm + índices GIN del catálogo
+    migrations/0003_trip_request_adults_nullable/ # adults nullable + CHECK de intake
     seed.ts                       # admin + catálogo de Colombia idempotente
   src/
     domain/
@@ -92,8 +173,13 @@ backend/
         transport-option.ts       # entidad + pricing_unit compatible con mode
         values.ts                 # normalización y validaciones compartidas
         ports.ts                  # repositorios y criterios de búsqueda
+      intake/
+        trip-request.ts           # agregado TripRequest, slots, missingFields y transiciones
+        ports.ts                  # TripRequestRepository y criterios de búsqueda
       shared/
         app-error.ts              # errores de dominio → HTTP
+        clock.ts                  # puerto Clock
+        money.ts                  # validación de enteros en unidades menores
     application/
       identity/
         login.use-case.ts
@@ -106,6 +192,17 @@ backend/
         *-use-case.ts             # list/get/create/update/deactivate por entidad
         presenters.ts             # entidad → DTO compartido
         assert-destination.ts     # destino activo para hoteles/actividades/transporte
+      intake/
+        create-trip-request.use-case.ts
+        get-trip-request.use-case.ts
+        list-trip-requests.use-case.ts
+        answer-trip-request.use-case.ts
+        prompt-parser.ts          # extracción determinista de slots (sin IA)
+        questions.ts              # máx. 2 preguntas/turno + chips del catálogo
+        catalog-context.ts        # carga todos los destinos activos
+        ownership.ts              # ADVISOR solo ve lo suyo; ADMIN ve todo
+        presenter.ts              # TripRequest → DTO compartido
+        views.ts
     infrastructure/
       persistence/prisma/
         client.ts
@@ -116,6 +213,7 @@ backend/
         hotel.repository.ts
         activity.repository.ts
         transport-option.repository.ts
+        trip-request.repository.ts
       security/
         argon2-password-hasher.ts
         jwt-access-token.service.ts
@@ -129,6 +227,7 @@ backend/
       hotel.controller.ts
       activity.controller.ts
       transport.controller.ts
+      trip-request.controller.ts
       cookies.ts                  # cookie HttpOnly del refresh
       middleware/
         auth.ts                   # requireAuth + requireRole
@@ -144,11 +243,15 @@ backend/
   test/
     fakes.ts                      # puertos de identidad en memoria
     catalog-fakes.ts              # repositorios de catálogo en memoria
+    intake-fakes.ts               # repositorio de trip requests en memoria
     user.test.ts
     login.use-case.test.ts
     refresh.use-case.test.ts
     catalog.domain.test.ts        # invariantes del catálogo
     catalog.http.test.ts          # Supertest: lecturas, RBAC y CRUD
+    intake.domain.test.ts         # invariantes y transiciones de TripRequest
+    prompt-parser.test.ts         # extracción determinista de slots y respuestas
+    intake.http.test.ts           # Supertest: create/get/list/answers + ownership
     auth.http.test.ts
     test-app.ts
 ```
@@ -217,12 +320,17 @@ Router montado en `/api/v1` (`backend/src/interfaces/http/routes.ts`).
 | `POST` | `/catalog/transport` | `Bearer` + `ADMIN` | `TransportController.create` | `CreateTransportOptionUseCase` | ✅ |
 | `PATCH` | `/catalog/transport/:id` | `Bearer` + `ADMIN` | `TransportController.update` | `UpdateTransportOptionUseCase` | ✅ |
 | `DELETE` | `/catalog/transport/:id` | `Bearer` + `ADMIN` | `TransportController.remove` | `DeactivateTransportOptionUseCase` | ✅ |
+| `GET` | `/trip-requests` | `Bearer` | `TripRequestController.list` | `ListTripRequestsUseCase` | ✅ |
+| `POST` | `/trip-requests` | `Bearer` (20/h/usuario) | `TripRequestController.create` | `CreateTripRequestUseCase` | ✅ |
+| `GET` | `/trip-requests/:id` | `Bearer` | `TripRequestController.get` | `GetTripRequestUseCase` | ✅ |
+| `POST` | `/trip-requests/:id/answers` | `Bearer` | `TripRequestController.answer` | `AnswerTripRequestUseCase` | ✅ |
 | `GET` | `/health` | público | — | — | ✅ |
 | `GET` | `/health/ready` | público | — | — | ✅ |
 | `PATCH` | `/users/:id` | `ADMIN` | — | — | ⏳ pendiente |
 
-Los endpoints de `trip-requests` y `plans` están especificados en [`API.md`](API.md), pero **aún no
-están implementados**. No los consumas todavía.
+Los endpoints de `plans` y `POST /trip-requests/:id/generate` están especificados en
+[`API.md`](API.md), pero corresponden a la Fase 4 y **aún no están implementados**. No los consumas
+todavía.
 
 ### 4.1 `POST /api/v1/auth/login`
 
@@ -375,6 +483,61 @@ Escritura (solo `ADMIN`): `POST`/`PATCH`/`DELETE` en `/catalog/destinations`, `/
 `{ "amountMinor": 48000000, "currency": "COP" }`; `DELETE` desactiva (`isActive=false`) y responde
 `204`. Los bodies desconocidos se rechazan con `422` y los IDs inexistentes con `404`.
 
+### 4.7 Intake conversacional (`/trip-requests`)
+
+Contrato completo en [`API.md` §4](API.md#4-solicitud-de-viaje-implementado--fase-3). El flujo es:
+
+```http
+POST /api/v1/trip-requests
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{ "prompt": "Quiero un viaje a Cartagena en diciembre" }
+```
+
+```http
+201 Created
+{
+  "tripRequest": {
+    "id": "9f1c...",
+    "status": "AWAITING_INPUT",
+    "slots": {
+      "destination": { "id": "...", "city": "Cartagena", "country": "Colombia" },
+      "durationDays": null,
+      "adults": null,
+      "children": 0,
+      "interests": [],
+      "budgetMin": null,
+      "budgetMax": null,
+      "currency": "COP"
+    },
+    "missingFields": ["duration", "travelers", "budget"],
+    "questions": [
+      { "field": "duration", "prompt": "¿Cuántos días y en qué fechas?", "chips": ["Fin de semana", "5 días", "10 días"] },
+      { "field": "travelers", "prompt": "¿Quiénes viajan?", "chips": ["Solo", "Pareja", "Familia con 2 niños", "4 amigos"] }
+    ]
+  }
+}
+```
+
+El cliente responde solo las preguntas del turno:
+
+```http
+POST /api/v1/trip-requests/9f1c.../answers
+{ "answers": [
+  { "field": "duration", "value": "5 días" },
+  { "field": "travelers", "value": "Pareja" }
+] }
+```
+
+- El parser es determinista y vive en `application/intake/prompt-parser.ts`; **no llama a Gemini**.
+- Los chips de destino se calculan con los destinos activos; "Sorpréndenos" resuelve al primero
+  destacado.
+- Un destino fuera del catálogo (p. ej. "París") responde `422` con `errors[].field = "destination"`.
+- `GET /trip-requests/:id` devuelve el estado actual; `GET /trip-requests?status=READY` lista.
+- `POST /trip-requests` tiene rate limit de 20/h/usuario.
+- `POST /trip-requests/:id/generate` **todavía no existe**: es la Fase 4.
+
 ---
 
 ## 5. Autenticación desde el frontend
@@ -521,6 +684,53 @@ export async function fetchDestinations(query: string): Promise<Paginated<Destin
 - Las pantallas de administración deben ocultarse para `ADVISOR`; la API igual responde `403`.
 - No guardes respuestas del catálogo en `localStorage`; TanStack Query es la caché.
 
+### 5.2 Consumo del intake
+
+El flujo del chat usa los DTOs compartidos `TripRequestDto`, `TripRequestResponse` y
+`TripRequestAnswer`. No reimplementes el parser ni calcules `missingFields` en el cliente: el
+servidor devuelve `status`, `slots`, `missingFields` y las `questions` del turno.
+
+```ts
+// frontend/src/features/workspace/api.ts
+import type {
+  TripRequestAnswer,
+  TripRequestDto,
+  TripRequestResponse,
+} from '@turiviaje/shared';
+import { apiFetch } from '../../shared/api/client';
+
+export async function createTripRequest(prompt: string): Promise<TripRequestDto> {
+  const response = await apiFetch('/api/v1/trip-requests', {
+    method: 'POST',
+    body: JSON.stringify({ prompt }),
+  });
+  if (!response.ok) throw await response.json();
+  const data = (await response.json()) as TripRequestResponse;
+  return data.tripRequest;
+}
+
+export async function answerTripRequest(
+  id: string,
+  answers: TripRequestAnswer[],
+): Promise<TripRequestDto> {
+  const response = await apiFetch(`/api/v1/trip-requests/${id}/answers`, {
+    method: 'POST',
+    body: JSON.stringify({ answers }),
+  });
+  if (!response.ok) throw await response.json();
+  const data = (await response.json()) as TripRequestResponse;
+  return data.tripRequest;
+}
+```
+
+- Renderiza `questions` tal cual llegan; máximo 2 por turno. Los chips son sugerencias, pero el
+  usuario puede escribir texto libre.
+- Si `status === 'READY'` y `questions` está vacío, habilita "Generar plan" (cuando exista la Fase 4).
+- Un `422` de destino trae `errors[0].field === 'destination'`; muéstralo como error del chip/entrada.
+- Guarda el historial de mensajes en Zustand, pero el estado de verdad (`status`, `slots`,
+  `missingFields`) siempre viene del servidor.
+- No inventes un plan ni precargues precios: la generación es la Fase 4 y aún no existe.
+
 ### Códigos que debe manejar el frontend
 
 | HTTP | `code` | Acción |
@@ -568,8 +778,8 @@ Todos los errores usan `application/problem+json`:
 | `POST /users` | ❌ `403` | ✅ |
 | Catálogo (lectura) | ✅ | ✅ |
 | Catálogo (escritura) | ❌ `403` | ✅ |
-| `trip-requests` propias (futuro) | CRUD | CRUD |
-| `trip-requests` ajenas (futuro) | ❌ `404` | ✅ |
+| `trip-requests` propias | CRUD | CRUD |
+| `trip-requests` ajenas | ❌ `404` | ✅ |
 | `plans` propios (futuro) | CRUD + publicar | CRUD + publicar |
 | `plans` ajenos (futuro) | ❌ `404` | ✅ |
 
@@ -641,9 +851,12 @@ npm run typecheck
 npm run build
 ```
 
-Estado actual: **47 tests de backend + 6 de `packages/shared`**, sin base de datos ni red (fakes).
+Estado actual: **88 tests de backend + 6 de `packages/shared`**, sin base de datos ni red (fakes).
 Los tests HTTP usan Supertest contra la app real con repositorios en memoria. El catálogo añade
-`catalog.domain.test.ts` (invariantes) y `catalog.http.test.ts` (lecturas, filtros, RBAC y CRUD).
+`catalog.domain.test.ts` (invariantes) y `catalog.http.test.ts` (lecturas, filtros, RBAC y CRUD). El
+intake añade `intake.domain.test.ts` (agregado y transiciones), `prompt-parser.test.ts` (extracción
+determinista con ≥ 10 prompts reales) e `intake.http.test.ts` (create/get/list/answers, ownership y
+validación).
 
 Los tests de integración contra Postgres siguen pendientes de credenciales reales. El patrón será
 limpiar por transacción o truncado, nunca compartir estado entre tests.
@@ -655,14 +868,16 @@ limpiar por transacción o truncado, nunca compartir estado entre tests.
 | Elemento | Estado |
 |---|---|
 | Scaffold, env, logger, errores, health | ✅ |
-| Prisma schema + migraciones `0001_init` y `0002_catalog_search` | ✅ (generadas, **no aplicadas** sin credenciales) |
+| Prisma schema + migraciones `0001_init`, `0002_catalog_search` y `0003_trip_request_adults_nullable` | ✅ (generadas, **no aplicadas** sin credenciales) |
 | Seed de admin + catálogo de Colombia | ✅ (código listo, **no ejecutado** sin credenciales) |
 | Login, refresh rotativo, logout, `/auth/me` | ✅ |
 | RBAC `ADMIN` + `POST /users` | ✅ |
 | Catálogo backend: destinos, hoteles, actividades y transporte | ✅ (lectura + CRUD `ADMIN`, soft delete) |
+| Intake backend: `TripRequest`, parser determinista, preguntas y respuestas | ✅ (Fase 3.1–3.2) |
 | Frontend `/login`, guard, refresh silencioso | ⏳ Fase 1.4 |
 | Frontend del catálogo (selector de destino) | ⏳ Fase 2.4 |
-| Intake conversacional | ⏳ Fase 3 |
+| Disponibilidad de catálogo (modelo + explorador) | ⏳ Fase 2.5 |
+| Frontend del intake (landing + chat) | ⏳ Fases 3.3–3.4 |
 | Gemini + generación | ⏳ Fase 4 (ver [`AI.md`](AI.md)) |
 
 Antes de conectar el frontend, confirma con el equipo:

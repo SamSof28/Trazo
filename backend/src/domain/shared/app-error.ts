@@ -13,7 +13,7 @@ export class AppError extends Error {
 }
 
 export class ValidationError extends AppError {
-  constructor(detail: string) {
+  constructor(detail: string, readonly field?: string) {
     super('VALIDATION_ERROR', 422, 'Datos inválidos', detail);
   }
 }

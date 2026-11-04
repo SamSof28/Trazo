@@ -1,9 +1,9 @@
 # AGENTS.md
 
 Instrucciones para sesiones de OpenCode en **TuriViajes** (Módulo 1: diseñador inteligente de planes
-turísticos). El repositorio ya tiene el monorepo y los backends de Fase 0, Fase 1 (identidad) y Fase 2
-(catálogo) implementados y con tests. El frontend y los módulos de intake/planificación aún no
-existen.
+turísticos). El repositorio ya tiene el monorepo y los backends de Fase 0, Fase 1 (identidad), Fase 2
+(catálogo) y Fase 3 (intake conversacional determinista) implementados y con tests. El frontend y los
+módulos de planificación/IA aún no existen.
 
 ## Contexto de producto
 
@@ -12,9 +12,9 @@ Un asesor escribe el viaje en lenguaje natural y la app devuelve un plan turíst
 el proceso manual en hojas de cálculo y correos. UX tipo Layla.ai: super prompt → chat que pregunta
 solo lo que falta → split-view con mapa, carrusel y timeline.
 
-Problema, objetivo, alcance, HUs y diagramas: [`README.md`](README.md) §1–§8. Fase actual: **2 —
-Catálogo**; 2.1–2.3 completos en backend y la 2.4 (frontend) está pendiente, al igual que la 1.4
-([`docs/ROADMAP.md`](docs/ROADMAP.md)).
+Problema, objetivo, alcance, HUs y diagramas: [`README.md`](README.md) §1–§8. Fase actual: **3 —
+Intake conversacional**; 3.1–3.2 completos en backend y las rebanadas de frontend 1.4, 2.4, 3.3–3.4
+pendientes, al igual que la disponibilidad 2.5 ([`docs/ROADMAP.md`](docs/ROADMAP.md)).
 
 ## Leer antes de codificar
 
@@ -67,13 +67,15 @@ npm run db:seed -w backend
 
 - **Implementado:** scaffold del monorepo, `config/env.ts` con Zod, logger pino con redacción,
   `errorHandler` problem+json, `/health`, `/health/ready`, Prisma schema completo + migraciones
-  `0001_init` y `0002_catalog_search` generadas, seed de admin y catálogo de Colombia, login, refresh
-  rotativo con detección de reuso, logout, `/auth/me`, RBAC, `POST /users` (solo `ADMIN`) y catálogo
-  completo (`destinations`, `hotels`, `activities`, `transport`) con lectura autenticada, escritura
-  `ADMIN` y soft delete.
-- **Tests:** 47 de backend + 6 de `packages/shared`, con fakes (sin DB ni red).
+  `0001_init`, `0002_catalog_search` y `0003_trip_request_adults_nullable` generadas, seed de admin y
+  catálogo de Colombia, login, refresh rotativo con detección de reuso, logout, `/auth/me`, RBAC,
+  `POST /users` (solo `ADMIN`), catálogo completo (`destinations`, `hotels`, `activities`,
+  `transport`) con lectura autenticada, escritura `ADMIN` y soft delete, e intake conversacional
+  (`TripRequest`, parser determinista, preguntas/respuestas, listado y ownership).
+- **Tests:** 88 de backend + 6 de `packages/shared`, con fakes (sin DB ni red).
 - **Pendiente inmediato:** aplicar las migraciones y el seed cuando existan credenciales reales de
-  Supabase; el frontend de las rebanadas 1.4 y 2.4; después, Fase 3 (intake conversacional).
+  Supabase; el frontend de las rebanadas 1.4, 2.4 y 3.3–3.4; el modelo de disponibilidad (2.5); después,
+  Fase 4 (generación con IA).
 - **Contrato de conexión:** [`docs/BACKEND.md`](docs/BACKEND.md). **IA:** [`docs/AI.md`](docs/AI.md).
 
 ## Estructura y regla de dependencia
@@ -95,15 +97,19 @@ packages/shared/   # esquemas Zod + tipos de contrato (fuente única)
 - Dirección permitida: `interfaces → application → domain`. `infrastructure` implementa puertos.
 - **Prohibido** importar Express, Prisma o el SDK de Gemini desde `domain/` y `application/`.
 - Inyección de dependencias manual en `config/container.ts`; sin decoradores ni contenedores mágicos.
-- Módulos (bounded contexts): `identity`, `catalog`, `planning`, `ai`. `planning` puede usar `catalog`
-  y `ai`; `catalog` no conoce `planning`; `identity` no conoce a nadie.
+- Módulos (bounded contexts): `identity`, `catalog`, `intake`, `planning`, `ai`. `intake` puede usar
+  `catalog`; `planning` puede usar `catalog`, `intake` y `ai`; `catalog` no conoce `intake` ni
+  `planning`; `identity` no conoce a nadie.
 
 ## Invariantes de dominio (romperlas es un bug)
 
 - Dinero = entero en unidades menores + moneda ISO-4217. **Cero floats** para precios; formatear solo en presentación.
 - El modelo de IA **nunca** produce precios ni nombres finales: devuelve `catalogItemId` + día + horario.
   El servidor valida el ID contra el shortlist y recalcula todo desde la BD.
-- Un `Plan` nace `DRAFT`; `PUBLISHED` es de solo lectura (duplicar para editar). Un plan = una moneda.
+- Un `Plan` nace `DRAFT`; `SAVED` es editable y `PUBLISHED` es de solo lectura (duplicar para editar).
+  Un plan = una moneda; `marginPercent` está entre 0 y 100.
+- Ningún ítem entra al plan si no está disponible para las fechas; la validación es server-side y
+  nunca se sobrevende.
 - `TripRequest` y `Plan` son agregados separados con estados separados (ver `docs/DOMAIN.md`).
   Los estados "pensando"/"consultando APIs" son de UI, no se persisten.
 - Ownership en el caso de uso: `ADVISOR` solo ve lo suyo; `ADMIN` ve todo. No confiar en el `advisorId`

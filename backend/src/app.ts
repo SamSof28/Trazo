@@ -10,6 +10,7 @@ import type { AuthController } from './interfaces/http/auth.controller.js';
 import type { DestinationController } from './interfaces/http/destination.controller.js';
 import type { HotelController } from './interfaces/http/hotel.controller.js';
 import type { TransportController } from './interfaces/http/transport.controller.js';
+import type { TripRequestController } from './interfaces/http/trip-request.controller.js';
 import type { UserController } from './interfaces/http/user.controller.js';
 import { errorHandler, notFoundHandler } from './interfaces/http/middleware/error-handler.js';
 import { globalLimiter } from './interfaces/http/rate-limit.js';
@@ -22,6 +23,7 @@ export interface AppDependencies {
   hotelController: HotelController;
   activityController: ActivityController;
   transportController: TransportController;
+  tripRequestController: TripRequestController;
   accessTokens: AccessTokenService;
   healthCheck: () => Promise<boolean>;
 }

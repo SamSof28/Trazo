@@ -43,7 +43,9 @@ export class GeneratePlanUseCase {
 flowchart LR
     identity -->|solo tipos| shared
     catalog --> shared
+    intake --> catalog
     planning --> catalog
+    planning --> intake
     planning --> ai
     ai --> shared
 ```
@@ -52,10 +54,13 @@ flowchart LR
 |---|---|---|
 | `identity` | Usuarios, login, tokens, roles | `User`, `RefreshToken` |
 | `catalog` | Destinos, hoteles, actividades, transporte, precios, imágenes | `Destination`, `Hotel`, `Activity`, `TransportOption` |
-| `planning` | Intake, generación, edición, presupuesto, publicación, dashboard | `TripRequest`, `Plan`, `PlanDay`, `PlanItem` |
+| `intake` | Solicitud de viaje, slots, preguntas y refinamiento conversacional | `TripRequest` |
+| `planning` | Generación, edición, presupuesto, publicación, dashboard | `Plan`, `PlanDay`, `PlanItem` |
 | `ai` | Puertos de IA, construcción de prompts, validación de salida, adaptadores | — |
 
-`planning` no expone entidades de `catalog` al frontend: usa DTOs con los campos necesarios.
+`intake` está implementado en la Fase 3 con un parser determinista y sin IA. `planning` y `ai` siguen
+siendo el contrato de las fases 4–6. `planning` no expone entidades de `catalog` al frontend: usa DTOs
+con los campos necesarios.
 
 ## 4. Ciclo de una petición HTTP
 
@@ -204,7 +209,7 @@ campos; nunca se commitea un `.env` real.
 |---|---|---|
 | Dominio | Vitest | Invariantes, `Money`, presupuesto, transiciones de estado |
 | Casos de uso | Vitest + fakes | Orquestación, autorización, grounding |
-| API | Supertest + Postgres test | Contratos, códigos de error, RBAC |
+| API | Supertest + repositorios en memoria (Postgres de test pendiente) | Contratos, códigos de error, RBAC |
 | Adaptador IA | Vitest + fixtures | Parseo, reparación, IDs inválidos, timeout |
 | Frontend | Testing Library | Flujo de preguntas, alternativas, estados de carga |
 
@@ -222,3 +227,4 @@ Cobertura objetivo: dominio y casos de uso ≥ 85 %; no perseguir cobertura en c
 | 6 | Generación asíncrona con `ai_jobs` | LLM > 20 s; no bloquear HTTP | Cliente hace polling; worker in-process |
 | 7 | Leaflet + OSM | Sin API key ni costo | Estilo de mapa más básico que Mapbox |
 | 8 | Dinero en enteros menores | Evita errores de redondeo | Formateo solo en el borde |
+| 9 | Parser determinista antes de la IA | Slots simples se resuelven sin costo ni latencia y son testeables offline | La IA de la Fase 4 solo se usa para ambigüedad y generación, nunca para precios |

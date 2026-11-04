@@ -23,12 +23,17 @@ import { ListTransportOptionsUseCase } from '../src/application/catalog/list-tra
 import { CreateTransportOptionUseCase } from '../src/application/catalog/create-transport-option.use-case.js';
 import { UpdateTransportOptionUseCase } from '../src/application/catalog/update-transport-option.use-case.js';
 import { DeactivateTransportOptionUseCase } from '../src/application/catalog/deactivate-transport-option.use-case.js';
+import { CreateTripRequestUseCase } from '../src/application/intake/create-trip-request.use-case.js';
+import { GetTripRequestUseCase } from '../src/application/intake/get-trip-request.use-case.js';
+import { ListTripRequestsUseCase } from '../src/application/intake/list-trip-requests.use-case.js';
+import { AnswerTripRequestUseCase } from '../src/application/intake/answer-trip-request.use-case.js';
 import { AuthController } from '../src/interfaces/http/auth.controller.js';
 import { UserController } from '../src/interfaces/http/user.controller.js';
 import { DestinationController } from '../src/interfaces/http/destination.controller.js';
 import { HotelController } from '../src/interfaces/http/hotel.controller.js';
 import { ActivityController } from '../src/interfaces/http/activity.controller.js';
 import { TransportController } from '../src/interfaces/http/transport.controller.js';
+import { TripRequestController } from '../src/interfaces/http/trip-request.controller.js';
 import { JwtAccessTokenService } from '../src/infrastructure/security/jwt-access-token.service.js';
 import {
   FakeHasher,
@@ -57,6 +62,7 @@ import {
   makeHotel,
   makeTransportOption,
 } from './catalog-fakes.js';
+import { InMemoryTripRequestRepository } from './intake-fakes.js';
 
 const SECRET = 'test-secret-that-is-at-least-32-chars-long';
 
@@ -68,6 +74,9 @@ export function buildTestApp(): {
     hotels: InMemoryHotelRepository;
     activities: InMemoryActivityRepository;
     transportOptions: InMemoryTransportOptionRepository;
+  };
+  intake: {
+    tripRequests: InMemoryTripRequestRepository;
   };
 } {
   const users = new InMemoryUserRepository([
@@ -161,6 +170,7 @@ export function buildTestApp(): {
       durationMinutes: 240,
     }),
   ]);
+  const tripRequests = new InMemoryTripRequestRepository();
 
   const authController = new AuthController(
     new LoginUseCase(users, hasher, accessTokens, refreshTokens, tokens, clock, 7),
@@ -194,6 +204,12 @@ export function buildTestApp(): {
     new UpdateTransportOptionUseCase(transportOptions, destinations, clock),
     new DeactivateTransportOptionUseCase(transportOptions, clock),
   );
+  const tripRequestController = new TripRequestController(
+    new CreateTripRequestUseCase(tripRequests, destinations, clock),
+    new GetTripRequestUseCase(tripRequests, destinations),
+    new ListTripRequestsUseCase(tripRequests, destinations),
+    new AnswerTripRequestUseCase(tripRequests, destinations, clock),
+  );
 
   const app = createApp({
     authController,
@@ -202,6 +218,7 @@ export function buildTestApp(): {
     hotelController,
     activityController,
     transportController,
+    tripRequestController,
     accessTokens,
     healthCheck: async () => true,
   });
@@ -210,6 +227,7 @@ export function buildTestApp(): {
     app,
     accessTokens,
     catalog: { destinations, hotels, activities, transportOptions },
+    intake: { tripRequests },
   };
 }
 

@@ -211,7 +211,7 @@ model TripRequest {
   startDate       DateTime?         @map("start_date") @db.Date
   endDate         DateTime?         @map("end_date") @db.Date
   durationDays    Int?              @map("duration_days") @db.SmallInt
-  adults          Int               @default(1) @db.SmallInt
+  adults          Int?              @db.SmallInt
   children        Int               @default(0) @db.SmallInt
   travelerType    TravelerType?     @map("traveler_type")
   interests       String[]          @default([])

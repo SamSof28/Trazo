@@ -3,9 +3,10 @@
 Base: `/api/v1`. JSON UTF-8. Autenticación `Authorization: Bearer <accessToken>` salvo donde se indique.
 Este documento es el contrato que consumen el frontend y los tests; cambia junto con el código.
 
-> **Estado:** las secciones 2 (auth e identidad) y 3 (catálogo) están implementadas. Las secciones
-> 4–6 son el contrato **planificado** para las fases 3–6; no las consumas todavía. El mapa real de
-> controllers y el ejemplo de cliente HTTP están en [`BACKEND.md`](BACKEND.md).
+> **Estado:** las secciones 2 (auth e identidad), 3 (catálogo) y 4 (solicitud de viaje) están
+> implementadas. Las secciones 5–6 son el contrato **planificado** para las fases 4–7; no las
+> consumas todavía. El mapa real de controllers y el ejemplo de cliente HTTP están en
+> [`BACKEND.md`](BACKEND.md).
 
 ## 1. Convenciones
 
@@ -317,52 +318,108 @@ Content-Type: application/json
 - Un `ADVISOR` recibe `403 FORBIDDEN` en cualquier escritura de catálogo.
 
 
-## 4. Solicitud de viaje (planificado — Fase 3)
+## 4. Solicitud de viaje (implementado — Fase 3)
 
 | Método | Ruta | Rol | Descripción |
 |---|---|---|---|
-| POST | `/trip-requests` | `ADVISOR` | Crea solicitud desde el super prompt |
+| POST | `/trip-requests` | `ADVISOR`/`ADMIN` | Crea solicitud desde el super prompt |
 | GET | `/trip-requests/:id` | dueño/`ADMIN` | Estado, slots y preguntas pendientes |
 | POST | `/trip-requests/:id/answers` | dueño/`ADMIN` | Responde slots; devuelve faltantes o `READY` |
-| POST | `/trip-requests/:id/generate` | dueño/`ADMIN` | Encola generación (`202`) |
-| GET | `/trip-requests` | dueño/`ADMIN` | Historial paginado |
+| GET | `/trip-requests?status=&page=&pageSize=` | dueño/`ADMIN` | Historial paginado; `ADMIN` ve todo |
+| POST | `/trip-requests/:id/generate` | dueño/`ADMIN` | Encola generación (`202`) — **Fase 4, no implementado** |
+
+### 4.1 Crear solicitud
 
 ```http
 POST /api/v1/trip-requests
+Authorization: Bearer <accessToken>
 { "prompt": "Quiero un viaje para dos personas en Colombia, 5 días, playa" }
+```
 
+```http
 201 Created
 {
-  "id": "9f1c...",
-  "status": "AWAITING_INPUT",
-  "slots": { "destination": null, "durationDays": 5, "adults": 2, "children": 0,
-             "interests": ["playa"], "budget": null },
-  "missingFields": ["destination", "startDate", "budget"],
-  "questions": [
-    { "field": "destination", "prompt": "¿A dónde quieren viajar?",
-      "chips": ["Cartagena y playa", "Eje Cafetero", "Sorpréndenos"] },
-    { "field": "budget", "prompt": "¿Qué presupuesto manejan por persona?",
-      "chips": ["Económico", "Medio", "Premium"] }
-  ]
+  "tripRequest": {
+    "id": "9f1c...",
+    "promptOriginal": "Quiero un viaje para dos personas en Colombia, 5 días, playa",
+    "status": "AWAITING_INPUT",
+    "slots": {
+      "destination": null,
+      "startDate": null,
+      "endDate": null,
+      "durationDays": 5,
+      "adults": 2,
+      "children": 0,
+      "travelerType": null,
+      "interests": ["playa"],
+      "budgetMin": null,
+      "budgetMax": null,
+      "currency": "COP"
+    },
+    "missingFields": ["destination", "budget"],
+    "questions": [
+      {
+        "field": "destination",
+        "prompt": "¿A dónde quieren viajar?",
+        "chips": ["Cartagena", "Medellín", "Santa Marta", "Sorpréndenos"]
+      },
+      {
+        "field": "budget",
+        "prompt": "¿Qué presupuesto manejan por persona?",
+        "chips": ["Económico", "Medio", "Premium"]
+      }
+    ],
+    "errorCode": null,
+    "createdAt": "2026-11-03T15:00:00.000Z",
+    "updatedAt": "2026-11-03T15:00:00.000Z"
+  }
 }
 ```
+
+- `prompt` es obligatorio, se recorta y admite 1–2000 caracteres; los campos desconocidos se rechazan
+  con `422`.
+- El `advisorId` sale del JWT; nunca se acepta en el body.
+- `slots.destination` es `{ id, city, country } | null`; los presupuestos son `Money | null`.
+- `missingFields` solo contiene `destination`, `duration`, `travelers` y `budget`. Los intereses son
+  opcionales y no bloquean `READY`.
+- `questions` trae **máximo 2** preguntas por turno; los chips de destino salen del catálogo activo.
+- `status` es `AWAITING_INPUT` si falta algún slot requerido y `READY` si están todos.
+
+### 4.2 Consultar y listar
+
+```http
+GET /api/v1/trip-requests/9f1c...
+GET /api/v1/trip-requests?status=READY&page=1&pageSize=20
+Authorization: Bearer <accessToken>
+```
+
+El detalle responde `{ "tripRequest": { ... } }`. El listado responde
+`Paginated<TripRequestDto>`: `{ items, page, pageSize, total }`. Un `ADVISOR` solo ve sus solicitudes;
+un `ADMIN` ve todas. Un ID ajeno o inexistente responde `404` (no `403`).
+
+### 4.3 Responder preguntas
 
 ```http
 POST /api/v1/trip-requests/9f1c.../answers
 { "answers": [
     { "field": "destination", "value": "Cartagena y playa" },
-    { "field": "budget", "value": "MEDIUM" },
-    { "field": "startDate", "value": "2026-12-10" }
+    { "field": "budget", "value": "Medio" }
 ] }
 
 200 OK
-{ "id": "9f1c...", "status": "READY", "missingFields": [], "questions": [] }
+{ "tripRequest": { "status": "READY", "missingFields": [], "questions": [], ... } }
 ```
 
-Reglas: máx. 2 preguntas por respuesta; valor inválido → `422` con `errors[].field`; responder una
-solicitud que no está en `COLLECTING|AWAITING_INPUT` → `409 CONFLICT`.
+- `field` ∈ `destination|duration|travelers|budget`; `value` es texto libre (1–200 chars) y lo
+  interpreta el parser determinista.
+- Se aceptan de 1 a 4 respuestas por turno, sin campos repetidos (`422` con `errors[].field`).
+- Un destino que no existe en el catálogo responde `422` con
+  `errors: [{ "field": "destination", "message": "No encontramos ... en el catálogo..." }]`.
+- Se puede responder incluso en `READY` para refinar; el estado se recalcula.
+- Responder en un estado que no sea `AWAITING_INPUT` o `READY` (p. ej. `GENERATING`) responde
+  `409 CONFLICT`.
 
-### Generación asíncrona
+### 4.4 Generación asíncrona (planificada — Fase 4)
 
 ```http
 POST /api/v1/trip-requests/9f1c.../generate
@@ -374,7 +431,7 @@ Idempotency-Key: 0b0e...
 
 El cliente consulta `GET /trip-requests/:id` hasta `GENERATED` (incluye `planId`) o `FAILED`
 (incluye `error.code`). Timeout de IA → `FAILED` + `AI_UNAVAILABLE`; reintentar es otro `POST /generate`.
-Doble generación con job activo → `409 CONFLICT`.
+Doble generación con job activo → `409 CONFLICT`. **Este endpoint todavía no existe.**
 
 ## 5. Planes (planificado — Fases 4–6)
 
@@ -452,8 +509,8 @@ inventa un precio: si `fromPrice` es `null`, el pin solo muestra el nombre.
 | `POST /users` | ❌ (`403`) | ✅ | ✅ |
 | Catálogo (lectura) | ✅ | ✅ | ✅ |
 | Catálogo (escritura) | ❌ (`403`) | ✅ | ✅ |
-| `trip-requests` propias | CRUD | CRUD | ⏳ Fase 3 |
-| `trip-requests` ajenas | ❌ (`404`) | ✅ | ⏳ Fase 3 |
+| `trip-requests` propias | CRUD | CRUD | ✅ Fase 3 |
+| `trip-requests` ajenas | ❌ (`404`) | ✅ | ✅ Fase 3 |
 | `plans` propios | CRUD + publicar | CRUD + publicar | ⏳ Fases 4–6 |
 | `plans` ajenos | ❌ (`404`) | ✅ | ⏳ Fases 4–6 |
 | `PATCH /users/:id` | ❌ | ✅ | ⏳ pendiente |
@@ -468,7 +525,7 @@ del body.
 | `POST /auth/login` | 5/min/IP | ✅ |
 | `POST /auth/refresh` | 30/min/IP | ✅ |
 | Global | 300/min/IP | ✅ |
-| `POST /trip-requests` | 20/h/usuario | ⏳ Fase 3 |
+| `POST /trip-requests` | 20/h/usuario | ✅ |
 | `POST /trip-requests/:id/generate` | 10/h/usuario | ⏳ Fase 4 |
 
 Cabeceras `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`; al exceder, `429` con
