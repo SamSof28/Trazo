@@ -258,6 +258,7 @@ GET /api/v1/catalog/transport?originId=<uuid>&destinationId=<uuid>&mode=FLIGHT
   "mode": "FLIGHT",
   "provider": "Avianca",
   "price": { "amountMinor": 45000000, "currency": "COP" },
+  "imageUrl": "https://.../transport/cartagena/flight-avianca.webp",
   "pricingUnit": "PER_PERSON",
   "durationMinutes": 90,
   "isActive": true,
@@ -269,6 +270,7 @@ GET /api/v1/catalog/transport?originId=<uuid>&destinationId=<uuid>&mode=FLIGHT
 - `maxPriceMinor` se compara en la moneda indicada por `currency` (por defecto `COP`).
 - `interest` filtra por etiqueta exacta normalizada a minúsculas.
 - `mode` acepta `FLIGHT|BUS|CAR_RENTAL|BOAT|TRAIN`.
+- `imageUrl` es la imagen principal del transporte; puede ser `null` si el ítem no tiene imagen.
 - `pricingUnit` debe respetar el modo: `CAR_RENTAL` solo `PER_DAY`; `FLIGHT` `PER_TRIP` o
   `PER_PERSON`; `BUS`, `BOAT` y `TRAIN` `PER_PERSON` o `PER_TRIP`. `PER_NIGHT` no aplica a
   transporte. `originId` y `destinationId` no pueden ser el mismo destino.

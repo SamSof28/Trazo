@@ -81,6 +81,7 @@ export function toTransportOptionDto(option: TransportOption): TransportOptionDt
       amountMinor: option.priceMinor,
       currency: option.currency,
     },
+    imageUrl: option.imageUrl,
     pricingUnit: option.pricingUnit,
     durationMinutes: option.durationMinutes,
     isActive: option.isActive,

@@ -64,6 +64,7 @@ export interface TransportOptionDto {
   mode: TransportMode;
   provider: string;
   price: Money;
+  imageUrl: string | null;
   pricingUnit: PricingUnit;
   durationMinutes: number;
   isActive: boolean;

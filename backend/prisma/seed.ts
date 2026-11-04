@@ -1,17 +1,61 @@
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import argon2 from 'argon2';
 import { PrismaClient } from '@prisma/client';
 import type { ActivityIntensity, PricingUnit, TransportMode } from '@trazo/shared';
 import { env } from '../src/config/env.js';
+import { SupabaseStorage } from '../src/infrastructure/storage/supabase-storage.js';
 
 const prisma = new PrismaClient({ datasourceUrl: env.DIRECT_URL });
+
+const here = dirname(fileURLToPath(import.meta.url));
+const assetsDir = resolve(here, 'assets/catalog');
+
+const storageConfig =
+  env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY
+    ? {
+        url: env.SUPABASE_URL,
+        serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+        bucket: env.SUPABASE_STORAGE_BUCKET,
+      }
+    : null;
+
+let storage = storageConfig ? new SupabaseStorage(storageConfig) : null;
+
+function slugify(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 120);
+}
+
+async function resolveImageUrl(key: string, fallbackSeed: string): Promise<string> {
+  const objectPath = `${key}.webp`;
+  const localPath = join(assetsDir, objectPath);
+
+  if (storage && existsSync(localPath)) {
+    const body = await readFile(localPath);
+    await storage.upload({ path: objectPath, body, contentType: 'image/webp' });
+    return storage.publicUrl(objectPath);
+  }
+
+  if (storage) {
+    console.warn(`[seed] Missing local image ${objectPath}; using placeholder`);
+  }
+  return `https://picsum.photos/seed/${fallbackSeed}/1600/900`;
+}
 
 interface DestinationSeed {
   city: string;
   country: string;
   slug: string;
   description: string;
-  heroImageUrl: string;
   latitude: number;
   longitude: number;
   tags: string[];
@@ -24,7 +68,6 @@ interface HotelSeed {
   category: number;
   roomType: string;
   pricePerNightMinor: number;
-  imageUrl: string;
   amenities: Record<string, boolean | string>;
 }
 
@@ -34,7 +77,6 @@ interface ActivitySeed {
   intensity: ActivityIntensity;
   durationMinutes: number;
   pricePerPersonMinor: number;
-  imageUrl: string;
   tags: string[];
 }
 
@@ -55,7 +97,6 @@ const destinations: DestinationSeed[] = [
     slug: 'cartagena',
     description:
       'Ciudad amurallada frente al Caribe: historia colonial, playas cercanas y una gastronomía que mezcla sabores afrocaribeños.',
-    heroImageUrl: 'https://picsum.photos/seed/trazo-cartagena/1600/900',
     latitude: 10.391049,
     longitude: -75.479426,
     tags: ['playa', 'historia', 'gastronomia', 'ciudad-amurallada'],
@@ -67,7 +108,6 @@ const destinations: DestinationSeed[] = [
     slug: 'eje-cafetero',
     description:
       'Paisaje Cultural Cafetero entre palmas de cera, fincas tradicionales y pueblos de colores.',
-    heroImageUrl: 'https://picsum.photos/seed/trazo-eje-cafetero/1600/900',
     latitude: 4.637,
     longitude: -75.57,
     tags: ['cafe', 'naturaleza', 'aventura'],
@@ -79,7 +119,6 @@ const destinations: DestinationSeed[] = [
     slug: 'medellin',
     description:
       'Ciudad de la eterna primavera: cultura urbana, gastronomía, vida nocturna y montañas cercanas.',
-    heroImageUrl: 'https://picsum.photos/seed/trazo-medellin/1600/900',
     latitude: 6.244203,
     longitude: -75.581211,
     tags: ['ciudad', 'cultura', 'vida-nocturna', 'gastronomia'],
@@ -91,7 +130,6 @@ const destinations: DestinationSeed[] = [
     slug: 'san-andres',
     description:
       'Isla del Caribe con aguas turquesa, arrecifes de coral y una cultura isleña única.',
-    heroImageUrl: 'https://picsum.photos/seed/trazo-san-andres/1600/900',
     latitude: 12.584,
     longitude: -81.7,
     tags: ['playa', 'buceo', 'caribe'],
@@ -103,7 +141,6 @@ const destinations: DestinationSeed[] = [
     slug: 'santa-marta',
     description:
       'La ciudad más antigua de Colombia: playas, Sierra Nevada, historia y naturaleza en un mismo viaje.',
-    heroImageUrl: 'https://picsum.photos/seed/trazo-santa-marta/1600/900',
     latitude: 11.24,
     longitude: -74.199,
     tags: ['playa', 'naturaleza', 'historia', 'aventura'],
@@ -119,7 +156,6 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 5,
       roomType: 'Suite',
       pricePerNightMinor: 128_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-hotel-san-agustin/1200/800',
       amenities: { wifi: true, pool: true, breakfast: true, spa: true },
     },
     {
@@ -128,7 +164,6 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 4,
       roomType: 'Doble',
       pricePerNightMinor: 52_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-hotel-bovedas/1200/800',
       amenities: { wifi: true, breakfast: true, terrace: true },
     },
   ],
@@ -139,7 +174,6 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 4,
       roomType: 'Doble',
       pricePerNightMinor: 36_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-hotel-mirador/1200/800',
       amenities: { wifi: true, breakfast: true, fireplace: true },
     },
     {
@@ -148,7 +182,6 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 3,
       roomType: 'Familiar',
       pricePerNightMinor: 24_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-finca-rivera/1200/800',
       amenities: { wifi: true, breakfast: true, parking: true },
     },
   ],
@@ -159,7 +192,6 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 5,
       roomType: 'Deluxe',
       pricePerNightMinor: 64_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-hotel-poblado/1200/800',
       amenities: { wifi: true, pool: true, gym: true, breakfast: true },
     },
     {
@@ -168,7 +200,6 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 3,
       roomType: 'Estándar',
       pricePerNightMinor: 28_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-hotel-laureles/1200/800',
       amenities: { wifi: true, breakfast: true, parking: true },
     },
   ],
@@ -179,7 +210,6 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 5,
       roomType: 'Todo incluido',
       pricePerNightMinor: 98_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-hotel-decameron/1200/800',
       amenities: { wifi: true, pool: true, allInclusive: true, beachAccess: true },
     },
     {
@@ -188,7 +218,6 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 3,
       roomType: 'Doble',
       pricePerNightMinor: 32_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-posada-elma/1200/800',
       amenities: { wifi: true, breakfast: true, terrace: true },
     },
   ],
@@ -199,7 +228,6 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 5,
       roomType: 'Bungalow',
       pricePerNightMinor: 76_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-hotel-irotama/1200/800',
       amenities: { wifi: true, pool: true, beachAccess: true, kidsClub: true },
     },
     {
@@ -208,7 +236,6 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 4,
       roomType: 'Doble',
       pricePerNightMinor: 42_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-casa-mango/1200/800',
       amenities: { wifi: true, breakfast: true, rooftop: true },
     },
   ],
@@ -222,7 +249,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 180,
       pricePerPersonMinor: 12_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-city-tour/1200/800',
       tags: ['historia', 'cultura'],
     },
     {
@@ -231,7 +257,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 480,
       pricePerPersonMinor: 28_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-rosario/1200/800',
       tags: ['playa', 'naturaleza'],
     },
     {
@@ -240,7 +265,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 180,
       pricePerPersonMinor: 18_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-cocina/1200/800',
       tags: ['gastronomia', 'cultura'],
     },
     {
@@ -249,7 +273,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 120,
       pricePerPersonMinor: 9_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-kayak/1200/800',
       tags: ['aventura', 'playa'],
     },
   ],
@@ -260,7 +283,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 180,
       pricePerPersonMinor: 9_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-tour-cafe/1200/800',
       tags: ['cafe', 'naturaleza'],
     },
     {
@@ -269,7 +291,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 300,
       pricePerPersonMinor: 14_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-cocora/1200/800',
       tags: ['naturaleza', 'aventura'],
     },
     {
@@ -278,7 +299,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 180,
       pricePerPersonMinor: 12_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-cabalgata/1200/800',
       tags: ['aventura', 'naturaleza'],
     },
     {
@@ -287,7 +307,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 120,
       pricePerPersonMinor: 5_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-tejido/1200/800',
       tags: ['cultura', 'artesania'],
     },
   ],
@@ -298,7 +317,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 150,
       pricePerPersonMinor: 8_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-comuna13/1200/800',
       tags: ['cultura', 'historia'],
     },
     {
@@ -307,7 +325,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'HIGH',
       durationMinutes: 180,
       pricePerPersonMinor: 22_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-parapente/1200/800',
       tags: ['aventura'],
     },
     {
@@ -316,7 +333,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 120,
       pricePerPersonMinor: 6_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-plaza-minorista/1200/800',
       tags: ['gastronomia', 'cultura'],
     },
     {
@@ -325,7 +341,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 240,
       pricePerPersonMinor: 15_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-noche/1200/800',
       tags: ['vida-nocturna', 'gastronomia'],
     },
   ],
@@ -336,7 +351,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 240,
       pricePerPersonMinor: 18_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-johnny-cay/1200/800',
       tags: ['playa', 'buceo'],
     },
     {
@@ -345,7 +359,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'HIGH',
       durationMinutes: 300,
       pricePerPersonMinor: 32_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-buceo/1200/800',
       tags: ['buceo', 'aventura'],
     },
     {
@@ -354,7 +367,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 240,
       pricePerPersonMinor: 10_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-carrito/1200/800',
       tags: ['playa'],
     },
     {
@@ -363,7 +375,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 300,
       pricePerPersonMinor: 16_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-acuario/1200/800',
       tags: ['playa', 'naturaleza'],
     },
   ],
@@ -374,7 +385,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'HIGH',
       durationMinutes: 480,
       pricePerPersonMinor: 24_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-tayrona/1200/800',
       tags: ['naturaleza', 'playa'],
     },
     {
@@ -383,7 +393,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 180,
       pricePerPersonMinor: 9_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-tubing/1200/800',
       tags: ['aventura', 'naturaleza'],
     },
     {
@@ -392,7 +401,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 150,
       pricePerPersonMinor: 7_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-santa-marta-tour/1200/800',
       tags: ['historia', 'cultura'],
     },
     {
@@ -401,7 +409,6 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 360,
       pricePerPersonMinor: 15_000_000,
-      imageUrl: 'https://picsum.photos/seed/trazo-playa-cristal/1200/800',
       tags: ['playa', 'naturaleza'],
     },
   ],
@@ -537,13 +544,17 @@ async function seedCatalog(): Promise<void> {
   const destinationIds = new Map<string, string>();
 
   for (const destination of destinations) {
+    const heroImageUrl = await resolveImageUrl(
+      `destinations/${destination.slug}`,
+      `trazo-${destination.slug}`,
+    );
     const row = await prisma.destination.upsert({
       where: { slug: destination.slug },
       update: {
         city: destination.city,
         country: destination.country,
         description: destination.description,
-        heroImageUrl: destination.heroImageUrl,
+        heroImageUrl,
         latitude: destination.latitude,
         longitude: destination.longitude,
         tags: destination.tags,
@@ -553,6 +564,7 @@ async function seedCatalog(): Promise<void> {
       create: {
         id: randomUUID(),
         ...destination,
+        heroImageUrl,
         timezone: 'America/Bogota',
         isActive: true,
       },
@@ -569,7 +581,11 @@ async function seedCatalog(): Promise<void> {
       const existing = await prisma.hotel.findFirst({
         where: { destinationId, name: hotel.name },
       });
-      const data = { ...hotel, destinationId, currency: 'COP', isActive: true };
+      const imageUrl = await resolveImageUrl(
+        `hotels/${slug}/${slugify(hotel.name)}`,
+        `trazo-${slugify(hotel.name)}`,
+      );
+      const data = { ...hotel, destinationId, currency: 'COP', imageUrl, isActive: true };
       if (existing) {
         await prisma.hotel.update({ where: { id: existing.id }, data });
       } else {
@@ -588,7 +604,11 @@ async function seedCatalog(): Promise<void> {
       const existing = await prisma.activity.findFirst({
         where: { destinationId, name: activity.name },
       });
-      const data = { ...activity, destinationId, currency: 'COP', isActive: true };
+      const imageUrl = await resolveImageUrl(
+        `activities/${slug}/${slugify(activity.name)}`,
+        `trazo-${slugify(activity.name)}`,
+      );
+      const data = { ...activity, destinationId, currency: 'COP', imageUrl, isActive: true };
       if (existing) {
         await prisma.activity.update({ where: { id: existing.id }, data });
       } else {
@@ -617,6 +637,10 @@ async function seedCatalog(): Promise<void> {
         provider: option.provider,
       },
     });
+    const imageUrl = await resolveImageUrl(
+      `transport/${option.destinationSlug}/${slugify(option.mode)}-${slugify(option.provider)}`,
+      `trazo-transport-${option.destinationSlug}-${slugify(option.provider)}`,
+    );
     const data = {
       originDestinationId,
       destinationId,
@@ -624,6 +648,7 @@ async function seedCatalog(): Promise<void> {
       provider: option.provider,
       priceMinor: option.priceMinor,
       currency: 'COP',
+      imageUrl,
       pricingUnit: option.pricingUnit,
       durationMinutes: option.durationMinutes,
       isActive: true,
@@ -642,6 +667,22 @@ async function seedCatalog(): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  if (storage) {
+    try {
+      await storage.ensureBucket();
+      console.log(
+        `Images: uploading local assets to Supabase Storage bucket "${env.SUPABASE_STORAGE_BUCKET}"`,
+      );
+    } catch (error) {
+      console.warn(
+        `Images: Supabase Storage unavailable, using placeholders (${error instanceof Error ? error.message : String(error)})`,
+      );
+      storage = null;
+    }
+  } else {
+    console.log('Images: Supabase Storage not configured; using picsum.photos placeholders');
+  }
+
   await seedAdmin();
   await seedCatalog();
 }

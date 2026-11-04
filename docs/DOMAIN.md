@@ -68,7 +68,8 @@ los pines del mapa. Si no hay hoteles activos en COP, es `null`.
 
 **transport_options**: `id`, `origin_destination_id` (nullable, FK), `destination_id` FK,
 `mode enum(FLIGHT|BUS|CAR_RENTAL|BOAT|TRAIN)`, `provider`, `price_minor`, `currency`,
-`pricing_unit enum(PER_PERSON|PER_NIGHT|PER_DAY|PER_TRIP)`, `duration_minutes`, `is_active`.
+`image_url`, `pricing_unit enum(PER_PERSON|PER_NIGHT|PER_DAY|PER_TRIP)`, `duration_minutes`,
+`is_active`.
 Reglas de `pricing_unit`: `CAR_RENTAL` exige `PER_DAY`; `FLIGHT` admite `PER_TRIP` o `PER_PERSON`;
 `BUS`, `BOAT` y `TRAIN` admiten `PER_PERSON` o `PER_TRIP`; `PER_NIGHT` no aplica a transporte.
 `origin_destination_id` no puede ser igual a `destination_id`.
@@ -77,6 +78,13 @@ El catálogo usa **soft delete**: `DELETE /catalog/...` pone `is_active=false`; 
 para no romper los `plan_items` que las referencian. Las lecturas solo devuelven ítems activos de
 destinos activos. La migración `0002_catalog_search` crea `pg_trgm`, los índices GIN de búsqueda y el
 índice de rutas de transporte.
+
+**Imágenes de catálogo.** Cada entidad tiene una sola imagen principal: `destinations.hero_image_url`,
+`hotels.image_url`, `activities.image_url` y `transport_options.image_url`. Los archivos viven en el
+bucket público `catalog` de Supabase Storage y la base solo guarda la URL pública. El seed sube los
+WebP locales de `backend/prisma/assets/catalog/` y usa `picsum.photos` como fallback de desarrollo si
+Storage no está configurado o falta el archivo. `plans.hero_image_url` y `plan_items.image_url` son
+snapshots: un plan publicado conserva la imagen que tenía al generarse aunque el catálogo cambie.
 
 
 ### intake
@@ -209,6 +217,7 @@ erDiagram
 | INV-18 | `day.subtotal` es la suma de sus ítems y `plan.subtotal` la suma de los días; el cliente nunca envía totales. |
 | INV-19 | `margin_percent` está entre 0 y 100; `margin` y `total` se recalculan en el servidor. |
 | INV-20 | `SAVED` es editable; `PUBLISHED` es inmutable y se duplica para editar. |
+| INV-21 | Cada entidad de catálogo tiene como máximo una imagen principal; la URL se valida como `http(s)` y los planes guardan un snapshot. |
 
 ## 5. Cálculo de presupuesto
 

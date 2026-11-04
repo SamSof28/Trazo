@@ -1,6 +1,12 @@
 import type { PricingUnit, TransportMode } from '@trazo/shared';
 import { ValidationError } from '../shared/app-error.js';
-import { assertDuration, assertPrice, normalizeCurrency, normalizeText } from './values.js';
+import {
+  assertDuration,
+  assertPrice,
+  normalizeCurrency,
+  normalizeHttpUrl,
+  normalizeText,
+} from './values.js';
 
 export interface TransportOptionProps {
   id: string;
@@ -10,6 +16,7 @@ export interface TransportOptionProps {
   provider: string;
   priceMinor: number;
   currency: string;
+  imageUrl: string | null;
   pricingUnit: PricingUnit;
   durationMinutes: number;
   isActive: boolean;
@@ -24,6 +31,7 @@ export interface CreateTransportOptionData {
   mode: TransportMode;
   provider: string;
   price: { amountMinor: number; currency: string };
+  imageUrl?: string | null;
   pricingUnit: PricingUnit;
   durationMinutes: number;
   isActive?: boolean;
@@ -36,6 +44,7 @@ export interface UpdateTransportOptionData {
   mode?: TransportMode;
   provider?: string;
   price?: { amountMinor: number; currency: string };
+  imageUrl?: string | null;
   pricingUnit?: PricingUnit;
   durationMinutes?: number;
   isActive?: boolean;
@@ -116,6 +125,7 @@ export class TransportOption {
       provider: normalizeText(input.provider, 'El proveedor', 2, 120),
       priceMinor: assertPrice(input.price.amountMinor, 'El precio del transporte'),
       currency: normalizeCurrency(input.price.currency),
+      imageUrl: normalizeHttpUrl(input.imageUrl, 'La imagen del transporte'),
       pricingUnit,
       durationMinutes: assertDuration(input.durationMinutes, 'La duración'),
       isActive: input.isActive ?? true,
@@ -155,6 +165,10 @@ export class TransportOption {
           : assertPrice(changes.price.amountMinor, 'El precio del transporte'),
       currency:
         changes.price === undefined ? this.currency : normalizeCurrency(changes.price.currency),
+      imageUrl:
+        changes.imageUrl === undefined
+          ? this.imageUrl
+          : normalizeHttpUrl(changes.imageUrl, 'La imagen del transporte'),
       pricingUnit,
       durationMinutes:
         changes.durationMinutes === undefined
@@ -196,6 +210,10 @@ export class TransportOption {
 
   get currency(): string {
     return this.props.currency;
+  }
+
+  get imageUrl(): string | null {
+    return this.props.imageUrl;
   }
 
   get pricingUnit(): PricingUnit {

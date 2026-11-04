@@ -82,7 +82,7 @@ export async function loadCatalogItem(
     type,
     catalogItemId: transport.id,
     name: `${transport.provider} (${transport.mode})`,
-    imageUrl: null,
+    imageUrl: transport.imageUrl,
     unitPriceMinor: transport.priceMinor,
     currency: transport.currency,
     pricingUnit: transport.pricingUnit,

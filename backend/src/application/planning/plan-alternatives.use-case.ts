@@ -111,7 +111,7 @@ export class ListPlanAlternativesUseCase {
         id: option.id,
         type,
         name: `${option.provider} (${option.mode})`,
-        imageUrl: null,
+        imageUrl: option.imageUrl,
         price: { amountMinor: option.priceMinor, currency: option.currency },
         pricingUnit: option.pricingUnit,
         tags: [option.mode],

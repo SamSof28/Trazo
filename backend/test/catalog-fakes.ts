@@ -111,6 +111,7 @@ export function makeTransportOption(
     provider: 'Avianca',
     priceMinor: 45_000_000,
     currency: 'COP',
+    imageUrl: null,
     pricingUnit: 'PER_PERSON' as PricingUnit,
     durationMinutes: 90,
     isActive: true,

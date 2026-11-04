@@ -187,6 +187,7 @@ model TransportOption {
   provider             String        @db.VarChar(120)
   priceMinor           BigInt        @map("price_minor")
   currency             String        @default("COP") @db.Char(3)
+  imageUrl             String?       @map("image_url")
   pricingUnit          PricingUnit   @map("pricing_unit")
   durationMinutes      Int           @map("duration_minutes")
   isActive             Boolean       @default(true) @map("is_active")

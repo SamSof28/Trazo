@@ -105,7 +105,7 @@ function entryFromTransport(option: TransportOption): ShortlistEntry {
     catalogItemId: option.id,
     type: 'TRANSPORT',
     name: `${option.provider} (${option.mode})`,
-    imageUrl: null,
+    imageUrl: option.imageUrl,
     priceMinor: option.priceMinor,
     currency: option.currency,
     pricingUnit: option.pricingUnit,

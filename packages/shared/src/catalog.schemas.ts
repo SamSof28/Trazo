@@ -136,6 +136,7 @@ const transportFields = {
   mode: transportModeSchema,
   provider: z.string().trim().min(2).max(120),
   price: moneySchema,
+  imageUrl: urlSchema.nullable(),
   pricingUnit: pricingUnitSchema,
   durationMinutes: z.number().int().positive().max(10_080),
   isActive: z.boolean(),
@@ -145,6 +146,7 @@ export const createTransportOptionSchema = z
   .object({
     ...transportFields,
     originDestinationId: transportFields.originDestinationId.optional(),
+    imageUrl: transportFields.imageUrl.optional(),
     isActive: transportFields.isActive.default(true),
   })
   .strict();

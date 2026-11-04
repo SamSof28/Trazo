@@ -38,8 +38,12 @@ const envSchema = z
 
     AI_PROVIDER: z.enum(['gemini', 'mock']).default('mock'),
     GEMINI_API_KEY: z.string().optional(),
-    GEMINI_MODEL: z.string().default('gemini-2.5-flash'),
+    GEMINI_MODEL: z.string().default('gemini-3-flash-preview'),
     AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120_000).default(45_000),
+
+    SUPABASE_URL: z.string().url().optional(),
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
+    SUPABASE_STORAGE_BUCKET: z.string().trim().min(1).max(63).default('catalog'),
 
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
@@ -63,6 +67,15 @@ const envSchema = z
         code: z.ZodIssueCode.custom,
         path: ['JWT_ACCESS_SECRET'],
         message: 'JWT_ACCESS_SECRET must be at least 32 characters in production',
+      });
+    }
+    const hasStorageUrl = Boolean(value.SUPABASE_URL);
+    const hasStorageKey = Boolean(value.SUPABASE_SERVICE_ROLE_KEY);
+    if (hasStorageUrl !== hasStorageKey) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['SUPABASE_URL'],
+        message: 'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be provided together',
       });
     }
   });
