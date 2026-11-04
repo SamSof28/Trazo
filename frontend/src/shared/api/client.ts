@@ -1,4 +1,17 @@
-import type { AuthSessionResponse, ProblemDetails, PublicUser } from '@trazo/shared';
+import type {
+  AuthSessionResponse,
+  CreateTripRequestInput,
+  AnswerTripRequestPayload,
+  TripRequestResponse,
+  ProblemDetails,
+  PublicUser,
+  DestinationDto,
+  Paginated,
+  PlanResponse,
+  PlanAlternativesResponse,
+  UpdatePlanInput,
+  ReplacePlanItemInput,
+} from '@trazo/shared';
 
 const API_BASE_URL =
   (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3000';
@@ -120,4 +133,113 @@ export async function fetchCurrentUser(): Promise<PublicUser> {
   const res = await apiFetch('/api/v1/auth/me');
   const data = await parseResponse<{ user: PublicUser }>(res);
   return data.user;
+}
+
+// Intake API
+export async function createTripRequest(payload: CreateTripRequestInput): Promise<TripRequestResponse> {
+  const res = await apiFetch('/api/v1/trip-requests', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return parseResponse<TripRequestResponse>(res);
+}
+
+export async function getTripRequest(id: string): Promise<TripRequestResponse> {
+  const res = await apiFetch(`/api/v1/trip-requests/${encodeURIComponent(id)}`);
+  return parseResponse<TripRequestResponse>(res);
+}
+
+export async function answerTripRequest(
+  id: string,
+  payload: AnswerTripRequestPayload,
+): Promise<TripRequestResponse> {
+  const res = await apiFetch(`/api/v1/trip-requests/${encodeURIComponent(id)}/answers`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return parseResponse<TripRequestResponse>(res);
+}
+
+export async function generateTripPlan(
+  id: string,
+): Promise<{ tripRequestId: string; jobId: string; status: string; pollAfterMs: number }> {
+  const res = await apiFetch(`/api/v1/trip-requests/${encodeURIComponent(id)}/generate`, {
+    method: 'POST',
+  });
+  return parseResponse(res);
+}
+
+// Catalog API
+export async function fetchFeaturedDestinations(): Promise<DestinationDto[]> {
+  const res = await apiFetch('/api/v1/catalog/destinations?featured=true&pageSize=6');
+  const data = await parseResponse<Paginated<DestinationDto>>(res);
+  return data.items;
+}
+
+// Planning API
+export async function getPlan(id: string): Promise<PlanResponse> {
+  const res = await apiFetch(`/api/v1/plans/${encodeURIComponent(id)}`);
+  return parseResponse<PlanResponse>(res);
+}
+
+export async function updatePlan(id: string, payload: UpdatePlanInput): Promise<PlanResponse> {
+  const res = await apiFetch(`/api/v1/plans/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+  return parseResponse<PlanResponse>(res);
+}
+
+export async function getPlanAlternatives(planId: string, itemId: string): Promise<PlanAlternativesResponse> {
+  const res = await apiFetch(
+    `/api/v1/plans/${encodeURIComponent(planId)}/alternatives?itemId=${encodeURIComponent(itemId)}`,
+  );
+  return parseResponse<PlanAlternativesResponse>(res);
+}
+
+export async function replacePlanItem(
+  planId: string,
+  itemId: string,
+  payload: ReplacePlanItemInput,
+): Promise<PlanResponse> {
+  const res = await apiFetch(
+    `/api/v1/plans/${encodeURIComponent(planId)}/items/${encodeURIComponent(itemId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    },
+  );
+  return parseResponse<PlanResponse>(res);
+}
+
+export async function deletePlanItem(planId: string, itemId: string): Promise<PlanResponse> {
+  const res = await apiFetch(
+    `/api/v1/plans/${encodeURIComponent(planId)}/items/${encodeURIComponent(itemId)}`,
+    {
+      method: 'DELETE',
+    },
+  );
+  return parseResponse<PlanResponse>(res);
+}
+
+export async function savePlan(id: string): Promise<PlanResponse> {
+  const res = await apiFetch(`/api/v1/plans/${encodeURIComponent(id)}/save`, {
+    method: 'POST',
+  });
+  return parseResponse<PlanResponse>(res);
+}
+
+export async function publishPlan(id: string): Promise<PlanResponse> {
+  const res = await apiFetch(`/api/v1/plans/${encodeURIComponent(id)}/publish`, {
+    method: 'POST',
+  });
+  return parseResponse<PlanResponse>(res);
+}
+
+export async function downloadPlanPdf(id: string): Promise<Blob> {
+  const res = await apiFetch(`/api/v1/plans/${encodeURIComponent(id)}/pdf`);
+  if (!res.ok) {
+    throw new ApiError(res.status);
+  }
+  return res.blob();
 }
