@@ -1,4 +1,4 @@
-import type { ActivityDto, DestinationDto, HotelDto, TransportOptionDto } from '@turiviaje/shared';
+import type { ActivityDto, DestinationDto, HotelDto, TransportOptionDto } from '@trazo/shared';
 import type { Activity } from '../../domain/catalog/activity.js';
 import type { Destination } from '../../domain/catalog/destination.js';
 import type { Hotel } from '../../domain/catalog/hotel.js';

@@ -1,4 +1,4 @@
-import type { MissingField, TravelerType } from '@turiviaje/shared';
+import type { MissingField, TravelerType } from '@trazo/shared';
 import type { Destination } from '../../domain/catalog/destination.js';
 import type { TripRequestSlots } from '../../domain/intake/trip-request.js';
 import { ValidationError } from '../../domain/shared/app-error.js';

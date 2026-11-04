@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
-import type { Role } from '@turiviaje/shared';
+import type { Role } from '@trazo/shared';
 import type { AccessToken, AccessTokenPayload, AccessTokenService } from '../../domain/identity/ports.js';
 
 export class JwtAccessTokenService implements AccessTokenService {

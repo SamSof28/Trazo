@@ -1,6 +1,6 @@
 import type { RequestHandler } from 'express';
 import type { AccessTokenService } from '../../../domain/identity/ports.js';
-import type { Role } from '@turiviaje/shared';
+import type { Role } from '@trazo/shared';
 import { ForbiddenError, UnauthenticatedError } from '../../../domain/shared/app-error.js';
 
 export function requireAuth(accessTokens: AccessTokenService): RequestHandler {

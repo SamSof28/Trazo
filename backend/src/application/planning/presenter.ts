@@ -5,7 +5,7 @@ import type {
   PlanDto,
   PlanItemDto,
   PlanReportDto,
-} from '@turiviaje/shared';
+} from '@trazo/shared';
 import type { Destination } from '../../domain/catalog/destination.js';
 import type { Plan, PlanDayProps, PlanItemProps } from '../../domain/planning/plan.js';
 

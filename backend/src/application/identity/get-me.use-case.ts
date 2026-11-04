@@ -1,4 +1,4 @@
-import type { PublicUser } from '@turiviaje/shared';
+import type { PublicUser } from '@trazo/shared';
 import { UnauthenticatedError } from '../../domain/shared/app-error.js';
 import type { UserRepository } from '../../domain/identity/ports.js';
 

@@ -1,4 +1,4 @@
-import type { PlanStatus } from '@turiviaje/shared';
+import type { PlanStatus } from '@trazo/shared';
 import type { AccessTokenPayload } from '../../domain/identity/ports.js';
 import type { Destination } from '../../domain/catalog/destination.js';
 import type { DestinationRepository } from '../../domain/catalog/ports.js';

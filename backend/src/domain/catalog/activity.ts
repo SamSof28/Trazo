@@ -1,4 +1,4 @@
-import type { ActivityIntensity } from '@turiviaje/shared';
+import type { ActivityIntensity } from '@trazo/shared';
 import { ValidationError } from '../shared/app-error.js';
 import {
   assertDuration,

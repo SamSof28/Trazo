@@ -1,4 +1,4 @@
-import type { ActivityIntensity, TransportMode } from '@turiviaje/shared';
+import type { ActivityIntensity, TransportMode } from '@trazo/shared';
 import type { Activity } from './activity.js';
 import type { Destination } from './destination.js';
 import type { Hotel } from './hotel.js';

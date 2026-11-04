@@ -1,4 +1,4 @@
-import type { ActivityIntensity, PricingUnit, TransportMode } from '@turiviaje/shared';
+import type { ActivityIntensity, PricingUnit, TransportMode } from '@trazo/shared';
 import { Activity } from '../src/domain/catalog/activity.js';
 import { Destination } from '../src/domain/catalog/destination.js';
 import { Hotel } from '../src/domain/catalog/hotel.js';

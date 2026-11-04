@@ -1,4 +1,4 @@
-# Dominio y modelo de datos — TuriViajes
+# Dominio y modelo de datos — Trazo
 
 Fuente de verdad del modelo relacional, el lenguaje ubicuo y las invariantes. Cualquier cambio de
 esquema se refleja aquí y en `backend/prisma/schema.prisma` en el mismo cambio.

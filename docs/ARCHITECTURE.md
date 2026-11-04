@@ -1,4 +1,4 @@
-# Arquitectura — TuriViajes
+# Arquitectura — Trazo
 
 Documento de referencia de la arquitectura implementada. Complementa [`../README.md`](../README.md),
 [`DOMAIN.md`](DOMAIN.md), [`BACKEND.md`](BACKEND.md) (mapa real del backend), [`AI.md`](AI.md)

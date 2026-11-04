@@ -1,5 +1,5 @@
 import type { AccessTokenPayload } from '../../domain/identity/ports.js';
-import type { TripRequestStatus } from '@turiviaje/shared';
+import type { TripRequestStatus } from '@trazo/shared';
 import type { DestinationRepository } from '../../domain/catalog/ports.js';
 import type { TripRequestRepository } from '../../domain/intake/ports.js';
 import { loadActiveDestinations } from './catalog-context.js';

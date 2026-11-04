@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import type { CreateUserInput, CreateUserResponse } from '@turiviaje/shared';
+import type { CreateUserInput, CreateUserResponse } from '@trazo/shared';
 import type { CreateUserUseCase } from '../../application/identity/create-user.use-case.js';
 
 export class UserController {

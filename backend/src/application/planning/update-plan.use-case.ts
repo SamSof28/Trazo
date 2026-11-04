@@ -1,4 +1,4 @@
-import type { UpdatePlanInput } from '@turiviaje/shared';
+import type { UpdatePlanInput } from '@trazo/shared';
 import type { AccessTokenPayload } from '../../domain/identity/ports.js';
 import type { DestinationRepository } from '../../domain/catalog/ports.js';
 import type { PlanRepository } from '../../domain/planning/ports.js';

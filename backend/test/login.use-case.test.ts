@@ -32,7 +32,7 @@ describe('LoginUseCase', () => {
     const { useCase, refreshTokens, userRepository } = build();
 
     const result = await useCase.execute({
-      email: 'ASESOR@TURIVIAJE.CO',
+      email: 'ASESOR@TRAZO.CO',
       password: 'secret-password',
     });
 
@@ -49,7 +49,7 @@ describe('LoginUseCase', () => {
     const { useCase, hasher } = build();
 
     await expect(
-      useCase.execute({ email: 'nadie@turiviaje.co', password: 'secret-password' }),
+      useCase.execute({ email: 'nadie@trazo.co', password: 'secret-password' }),
     ).rejects.toBeInstanceOf(InvalidCredentialsError);
 
     // Timing defense: a dummy hash is verified even when the user does not exist.
@@ -59,21 +59,21 @@ describe('LoginUseCase', () => {
   it('rejects a wrong password', async () => {
     const { useCase } = build();
     await expect(
-      useCase.execute({ email: 'asesor@turiviaje.co', password: 'wrong-password' }),
+      useCase.execute({ email: 'asesor@trazo.co', password: 'wrong-password' }),
     ).rejects.toBeInstanceOf(InvalidCredentialsError);
   });
 
   it('rejects inactive users without revealing the reason', async () => {
     const { useCase } = build([makeUser({ active: false })]);
     await expect(
-      useCase.execute({ email: 'asesor@turiviaje.co', password: 'secret-password' }),
+      useCase.execute({ email: 'asesor@trazo.co', password: 'secret-password' }),
     ).rejects.toBeInstanceOf(InvalidCredentialsError);
   });
 
   it('does not create a refresh token on failed login', async () => {
     const { useCase, refreshTokens } = build();
     await expect(
-      useCase.execute({ email: 'asesor@turiviaje.co', password: 'wrong-password' }),
+      useCase.execute({ email: 'asesor@trazo.co', password: 'wrong-password' }),
     ).rejects.toBeInstanceOf(InvalidCredentialsError);
     expect(refreshTokens.records).toHaveLength(0);
   });

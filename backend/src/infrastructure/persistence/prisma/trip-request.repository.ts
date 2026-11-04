@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import type { PrismaClient } from '@prisma/client';
-import type { MissingField } from '@turiviaje/shared';
+import type { MissingField } from '@trazo/shared';
 import { TripRequest } from '../../../domain/intake/trip-request.js';
 import type {
   TripRequestPage,

@@ -1,4 +1,4 @@
-import type { Role } from '@turiviaje/shared';
+import type { Role } from '@trazo/shared';
 import type {
   AccessToken,
   AccessTokenPayload,
@@ -19,7 +19,7 @@ export function makeUser(overrides: Partial<Parameters<typeof User.fromPersisten
   return User.fromPersistence({
     id: 'user-1',
     name: 'Asesor Demo',
-    email: 'asesor@turiviaje.co',
+    email: 'asesor@trazo.co',
     passwordHash: 'hashed:secret-password',
     role: 'ADVISOR',
     active: true,

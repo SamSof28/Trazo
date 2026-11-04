@@ -1,4 +1,4 @@
-import type { ErrorCode } from '@turiviaje/shared';
+import type { ErrorCode } from '@trazo/shared';
 
 export type AiJobStatus = 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED';
 

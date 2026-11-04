@@ -116,12 +116,12 @@ export function buildTestApp(): {
     makeUser({
       id: 'user-2',
       name: 'Otro Asesor',
-      email: 'otro@turiviaje.co',
+      email: 'otro@trazo.co',
     }),
     makeUser({
       id: 'admin-1',
       name: 'Admin Demo',
-      email: 'admin@turiviaje.co',
+      email: 'admin@trazo.co',
       role: 'ADMIN',
     }),
   ]);

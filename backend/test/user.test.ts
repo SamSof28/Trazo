@@ -4,7 +4,7 @@ import { User } from '../src/domain/identity/user.js';
 const base = {
   id: 'user-1',
   name: '  Asesor Demo  ',
-  email: '  ASESOR@TURIVIAJE.CO ',
+  email: '  ASESOR@TRAZO.CO ',
   passwordHash: 'hashed',
   role: 'ADVISOR' as const,
   now: new Date('2026-11-02T15:00:00.000Z'),
@@ -14,7 +14,7 @@ describe('User', () => {
   it('normalizes name and email', () => {
     const user = User.create(base);
     expect(user.name).toBe('Asesor Demo');
-    expect(user.email).toBe('asesor@turiviaje.co');
+    expect(user.email).toBe('asesor@trazo.co');
     expect(user.active).toBe(true);
   });
 
@@ -31,7 +31,7 @@ describe('User', () => {
     expect(user.toPublic()).toEqual({
       id: 'user-1',
       name: 'Asesor Demo',
-      email: 'asesor@turiviaje.co',
+      email: 'asesor@trazo.co',
       role: 'ADVISOR',
       isActive: true,
       createdAt: '2026-11-02T15:00:00.000Z',

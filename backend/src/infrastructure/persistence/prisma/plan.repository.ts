@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import type { PrismaClient } from '@prisma/client';
-import type { PlanItemType, PlanStatus, PricingUnit } from '@turiviaje/shared';
+import type { PlanItemType, PlanStatus, PricingUnit } from '@trazo/shared';
 import { Plan } from '../../../domain/planning/plan.js';
 import type {
   PlanPage,

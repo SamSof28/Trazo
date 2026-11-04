@@ -1,4 +1,4 @@
-# TuriViajes — Diseñador inteligente de planes turísticos
+# Trazo — Diseñador inteligente de planes turísticos
 
 Módulo 1 de la plataforma de transformación digital de una agencia de turismo: una aplicación web
 que convierte una frase en lenguaje natural en un plan turístico completo (destino, alojamiento,

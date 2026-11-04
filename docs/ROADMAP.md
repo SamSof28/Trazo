@@ -1,4 +1,4 @@
-# Hoja de ruta — TuriViajes
+# Hoja de ruta — Trazo
 
 Entrega **incremental por rebanadas verticales**. Una fase no empieza hasta que la anterior cumple su
 definición de terminado (DoD). Cada rebanada incluye dominio + caso de uso + adaptador + ruta + tests +

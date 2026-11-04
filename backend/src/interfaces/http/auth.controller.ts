@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import type { AuthSessionResponse, LoginInput, MeResponse } from '@turiviaje/shared';
+import type { AuthSessionResponse, LoginInput, MeResponse } from '@trazo/shared';
 import type { LoginUseCase } from '../../application/identity/login.use-case.js';
 import type { RefreshUseCase } from '../../application/identity/refresh.use-case.js';
 import type { LogoutUseCase } from '../../application/identity/logout.use-case.js';

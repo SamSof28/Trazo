@@ -1,4 +1,4 @@
-import type { PublicUser, Role } from '@turiviaje/shared';
+import type { PublicUser, Role } from '@trazo/shared';
 import { ValidationError } from '../shared/app-error.js';
 
 export interface UserProps {

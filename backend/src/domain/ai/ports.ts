@@ -1,4 +1,4 @@
-import type { PricingUnit } from '@turiviaje/shared';
+import type { PricingUnit } from '@trazo/shared';
 import type { AiJob } from './job.js';
 
 export interface AiPlannerContextItem {

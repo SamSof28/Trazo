@@ -1,4 +1,4 @@
-import type { IntakeQuestion, TripRequestDto } from '@turiviaje/shared';
+import type { IntakeQuestion, TripRequestDto } from '@trazo/shared';
 import type { Destination } from '../../domain/catalog/destination.js';
 import type { TripRequest } from '../../domain/intake/trip-request.js';
 

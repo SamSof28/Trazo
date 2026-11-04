@@ -1,4 +1,4 @@
-# Contrato de API — TuriViajes v1
+# Contrato de API — Trazo v1
 
 Base: `/api/v1`. JSON UTF-8. Autenticación `Authorization: Bearer <accessToken>` salvo donde se indique.
 Este documento es el contrato que consumen el frontend y los tests; cambia junto con el código.

@@ -12,7 +12,7 @@ const READY_PROMPT =
 
 type BuiltApp = ReturnType<typeof buildTestApp>;
 
-async function tokenFor(app: BuiltApp, email = 'asesor@turiviaje.co'): Promise<string> {
+async function tokenFor(app: BuiltApp, email = 'asesor@trazo.co'): Promise<string> {
   const { accessToken } = await loginAs(app.app, email);
   return accessToken;
 }
@@ -110,8 +110,8 @@ describe('HTTP plan generation', () => {
   it('enforces ownership on trip requests and plans', async () => {
     const built = buildTestApp();
     const advisor = await tokenFor(built);
-    const other = await tokenFor(built, 'otro@turiviaje.co');
-    const admin = await tokenFor(built, 'admin@turiviaje.co');
+    const other = await tokenFor(built, 'otro@trazo.co');
+    const admin = await tokenFor(built, 'admin@trazo.co');
 
     const tripRequestId = await createReadyRequest(built, advisor);
     const detail = await generatePlan(built, advisor, tripRequestId);

@@ -94,7 +94,7 @@ El modelo **no** aprende los hoteles de un `.env`. El conocimiento se compone de
 
 Vive en `backend/src/application/ai/prompt-builder.ts`, no en variables de entorno. Contiene:
 
-- Rol: "eres el planificador turístico de TuriViajes; diseñas borradores, no reservas".
+- Rol: "eres el planificador turístico de Trazo; diseñas borradores, no reservas".
 - Reglas de negocio: duración exacta, 1–6 ítems por día, días consecutivos, un solo alojamiento en el
   día 1, una moneda por plan.
 - Formato de salida: JSON estricto, sin Markdown ni texto adicional.
@@ -137,7 +137,7 @@ cachean planes ni respuestas completas del modelo.
 ### 4.1 System prompt
 
 ```text
-Eres el planificador turístico de TuriViajes. Diseñas borradores de viaje para asesores humanos.
+Eres el planificador turístico de Trazo. Diseñas borradores de viaje para asesores humanos.
 
 REGLAS OBLIGATORIAS:
 - Usa exclusivamente ítems del <catalog_shortlist>. No inventes IDs, nombres, precios ni monedas.

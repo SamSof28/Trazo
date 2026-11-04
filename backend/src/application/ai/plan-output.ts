@@ -1,4 +1,4 @@
-import type { PlanItemType, PricingUnit } from '@turiviaje/shared';
+import type { PlanItemType, PricingUnit } from '@trazo/shared';
 import { AiInvalidOutputError } from '../../domain/shared/app-error.js';
 import { planOutputSchema } from './plan-output.schema.js';
 

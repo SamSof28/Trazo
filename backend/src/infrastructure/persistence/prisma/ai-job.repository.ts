@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import type { AiJob as AiJobRecord, PrismaClient } from '@prisma/client';
-import type { ErrorCode } from '@turiviaje/shared';
+import type { ErrorCode } from '@trazo/shared';
 import { AiJob, type AiJobStatus } from '../../../domain/ai/job.js';
 import type { AiJobRepository } from '../../../domain/ai/ports.js';
 

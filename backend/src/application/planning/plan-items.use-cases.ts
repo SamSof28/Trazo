@@ -4,7 +4,7 @@ import type {
   MovePlanItemInput,
   ReplacePlanItemInput,
   UpdatePlanItemInput,
-} from '@turiviaje/shared';
+} from '@trazo/shared';
 import type { AccessTokenPayload } from '../../domain/identity/ports.js';
 import type { DestinationRepository } from '../../domain/catalog/ports.js';
 import type { TripRequestRepository } from '../../domain/intake/ports.js';

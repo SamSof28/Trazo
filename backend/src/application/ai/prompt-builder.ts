@@ -1,6 +1,6 @@
 import type { AiPlannerContext } from '../../domain/ai/ports.js';
 
-export const SYSTEM_PROMPT = `Eres el planificador turístico de TuriViajes. Diseñas borradores de viaje para asesores humanos.
+export const SYSTEM_PROMPT = `Eres el planificador turístico de Trazo. Diseñas borradores de viaje para asesores humanos.
 
 REGLAS OBLIGATORIAS:
 - Usa exclusivamente ítems del <catalog_shortlist>. No inventes IDs, nombres, precios ni monedas.

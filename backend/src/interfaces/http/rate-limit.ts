@@ -1,12 +1,12 @@
 import rateLimit from 'express-rate-limit';
 import type { Request, Response } from 'express';
-import type { ProblemDetails } from '@turiviaje/shared';
+import type { ProblemDetails } from '@trazo/shared';
 import { env } from '../../config/env.js';
 
 function tooManyRequests(req: Request, res: Response): void {
   const id = (req as { id?: unknown }).id;
   const body: ProblemDetails = {
-    type: 'https://api.turiviaje.co/problems/rate_limited',
+    type: 'https://api.trazo.co/problems/rate_limited',
     title: 'Demasiadas solicitudes',
     status: 429,
     code: 'RATE_LIMITED',

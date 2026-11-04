@@ -1,4 +1,4 @@
-import type { PlanStatus } from '@turiviaje/shared';
+import type { PlanStatus } from '@trazo/shared';
 import type { Plan } from './plan.js';
 
 export interface PlanPage<T> {

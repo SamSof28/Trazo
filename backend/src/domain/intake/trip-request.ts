@@ -1,4 +1,4 @@
-import type { MissingField, TravelerType, TripRequestStatus } from '@turiviaje/shared';
+import type { MissingField, TravelerType, TripRequestStatus } from '@trazo/shared';
 import { ConflictError, ValidationError } from '../shared/app-error.js';
 import { assertSafeMinor } from '../shared/money.js';
 

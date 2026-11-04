@@ -7,7 +7,7 @@ import type {
   PlanGenerationAccepted,
   TripRequestDto,
   TripRequestResponse,
-} from '@turiviaje/shared';
+} from '@trazo/shared';
 import type { PlanGenerationRunner } from '../../domain/ai/ports.js';
 import type { AnswerTripRequestUseCase } from '../../application/intake/answer-trip-request.use-case.js';
 import type { CreateTripRequestUseCase } from '../../application/intake/create-trip-request.use-case.js';

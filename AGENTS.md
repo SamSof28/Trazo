@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Instrucciones para sesiones de OpenCode en **TuriViajes** (Módulo 1: diseñador inteligente de planes
+Instrucciones para sesiones de OpenCode en **Trazo** (Módulo 1: diseñador inteligente de planes
 turísticos). El repositorio ya tiene el monorepo y el backend completo de las fases 0–7: fundación,
 identidad, catálogo, intake conversacional determinista, generación con IA anclada al catálogo, edición
 y presupuesto, guardado/publicación/dashboard y reportes JSON/CSV + PDF, todo con tests. El frontend
@@ -53,8 +53,8 @@ npm run lint                # ESLint flat, todos los workspaces
 npm run typecheck           # tsc --noEmit
 npm run test                # Vitest
 npm run verify              # lint → typecheck → test → build
-npm run test -w @turiviaje/backend -- test/auth.http.test.ts  # un archivo
-npm run test -w @turiviaje/backend -- -t "rotates"           # por nombre
+npm run test -w @trazo/backend -- test/auth.http.test.ts  # un archivo
+npm run test -w @trazo/backend -- -t "rotates"           # por nombre
 npm run build               # backend tsc (frontend cuando exista)
 npm run db:generate -w backend      # prisma generate
 npm run db:migrate -w backend       # prisma migrate dev (requiere DIRECT_URL)

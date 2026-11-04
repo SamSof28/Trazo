@@ -1,4 +1,4 @@
-import type { ErrorCode } from '@turiviaje/shared';
+import type { ErrorCode } from '@trazo/shared';
 import type {
   AiJobRepository,
   AiPlannerPort,

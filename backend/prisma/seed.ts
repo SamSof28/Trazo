@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import argon2 from 'argon2';
 import { PrismaClient } from '@prisma/client';
-import type { ActivityIntensity, PricingUnit, TransportMode } from '@turiviaje/shared';
+import type { ActivityIntensity, PricingUnit, TransportMode } from '@trazo/shared';
 import { env } from '../src/config/env.js';
 
 const prisma = new PrismaClient({ datasourceUrl: env.DIRECT_URL });
@@ -55,7 +55,7 @@ const destinations: DestinationSeed[] = [
     slug: 'cartagena',
     description:
       'Ciudad amurallada frente al Caribe: historia colonial, playas cercanas y una gastronomía que mezcla sabores afrocaribeños.',
-    heroImageUrl: 'https://picsum.photos/seed/turiviaje-cartagena/1600/900',
+    heroImageUrl: 'https://picsum.photos/seed/trazo-cartagena/1600/900',
     latitude: 10.391049,
     longitude: -75.479426,
     tags: ['playa', 'historia', 'gastronomia', 'ciudad-amurallada'],
@@ -67,7 +67,7 @@ const destinations: DestinationSeed[] = [
     slug: 'eje-cafetero',
     description:
       'Paisaje Cultural Cafetero entre palmas de cera, fincas tradicionales y pueblos de colores.',
-    heroImageUrl: 'https://picsum.photos/seed/turiviaje-eje-cafetero/1600/900',
+    heroImageUrl: 'https://picsum.photos/seed/trazo-eje-cafetero/1600/900',
     latitude: 4.637,
     longitude: -75.57,
     tags: ['cafe', 'naturaleza', 'aventura'],
@@ -79,7 +79,7 @@ const destinations: DestinationSeed[] = [
     slug: 'medellin',
     description:
       'Ciudad de la eterna primavera: cultura urbana, gastronomía, vida nocturna y montañas cercanas.',
-    heroImageUrl: 'https://picsum.photos/seed/turiviaje-medellin/1600/900',
+    heroImageUrl: 'https://picsum.photos/seed/trazo-medellin/1600/900',
     latitude: 6.244203,
     longitude: -75.581211,
     tags: ['ciudad', 'cultura', 'vida-nocturna', 'gastronomia'],
@@ -91,7 +91,7 @@ const destinations: DestinationSeed[] = [
     slug: 'san-andres',
     description:
       'Isla del Caribe con aguas turquesa, arrecifes de coral y una cultura isleña única.',
-    heroImageUrl: 'https://picsum.photos/seed/turiviaje-san-andres/1600/900',
+    heroImageUrl: 'https://picsum.photos/seed/trazo-san-andres/1600/900',
     latitude: 12.584,
     longitude: -81.7,
     tags: ['playa', 'buceo', 'caribe'],
@@ -103,7 +103,7 @@ const destinations: DestinationSeed[] = [
     slug: 'santa-marta',
     description:
       'La ciudad más antigua de Colombia: playas, Sierra Nevada, historia y naturaleza en un mismo viaje.',
-    heroImageUrl: 'https://picsum.photos/seed/turiviaje-santa-marta/1600/900',
+    heroImageUrl: 'https://picsum.photos/seed/trazo-santa-marta/1600/900',
     latitude: 11.24,
     longitude: -74.199,
     tags: ['playa', 'naturaleza', 'historia', 'aventura'],
@@ -119,7 +119,7 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 5,
       roomType: 'Suite',
       pricePerNightMinor: 128_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-hotel-san-agustin/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-hotel-san-agustin/1200/800',
       amenities: { wifi: true, pool: true, breakfast: true, spa: true },
     },
     {
@@ -128,7 +128,7 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 4,
       roomType: 'Doble',
       pricePerNightMinor: 52_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-hotel-bovedas/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-hotel-bovedas/1200/800',
       amenities: { wifi: true, breakfast: true, terrace: true },
     },
   ],
@@ -139,7 +139,7 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 4,
       roomType: 'Doble',
       pricePerNightMinor: 36_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-hotel-mirador/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-hotel-mirador/1200/800',
       amenities: { wifi: true, breakfast: true, fireplace: true },
     },
     {
@@ -148,7 +148,7 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 3,
       roomType: 'Familiar',
       pricePerNightMinor: 24_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-finca-rivera/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-finca-rivera/1200/800',
       amenities: { wifi: true, breakfast: true, parking: true },
     },
   ],
@@ -159,7 +159,7 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 5,
       roomType: 'Deluxe',
       pricePerNightMinor: 64_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-hotel-poblado/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-hotel-poblado/1200/800',
       amenities: { wifi: true, pool: true, gym: true, breakfast: true },
     },
     {
@@ -168,7 +168,7 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 3,
       roomType: 'Estándar',
       pricePerNightMinor: 28_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-hotel-laureles/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-hotel-laureles/1200/800',
       amenities: { wifi: true, breakfast: true, parking: true },
     },
   ],
@@ -179,7 +179,7 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 5,
       roomType: 'Todo incluido',
       pricePerNightMinor: 98_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-hotel-decameron/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-hotel-decameron/1200/800',
       amenities: { wifi: true, pool: true, allInclusive: true, beachAccess: true },
     },
     {
@@ -188,7 +188,7 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 3,
       roomType: 'Doble',
       pricePerNightMinor: 32_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-posada-elma/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-posada-elma/1200/800',
       amenities: { wifi: true, breakfast: true, terrace: true },
     },
   ],
@@ -199,7 +199,7 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 5,
       roomType: 'Bungalow',
       pricePerNightMinor: 76_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-hotel-irotama/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-hotel-irotama/1200/800',
       amenities: { wifi: true, pool: true, beachAccess: true, kidsClub: true },
     },
     {
@@ -208,7 +208,7 @@ const hotels: Record<string, HotelSeed[]> = {
       category: 4,
       roomType: 'Doble',
       pricePerNightMinor: 42_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-casa-mango/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-casa-mango/1200/800',
       amenities: { wifi: true, breakfast: true, rooftop: true },
     },
   ],
@@ -222,7 +222,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 180,
       pricePerPersonMinor: 12_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-city-tour/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-city-tour/1200/800',
       tags: ['historia', 'cultura'],
     },
     {
@@ -231,7 +231,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 480,
       pricePerPersonMinor: 28_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-rosario/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-rosario/1200/800',
       tags: ['playa', 'naturaleza'],
     },
     {
@@ -240,7 +240,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 180,
       pricePerPersonMinor: 18_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-cocina/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-cocina/1200/800',
       tags: ['gastronomia', 'cultura'],
     },
     {
@@ -249,7 +249,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 120,
       pricePerPersonMinor: 9_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-kayak/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-kayak/1200/800',
       tags: ['aventura', 'playa'],
     },
   ],
@@ -260,7 +260,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 180,
       pricePerPersonMinor: 9_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-tour-cafe/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-tour-cafe/1200/800',
       tags: ['cafe', 'naturaleza'],
     },
     {
@@ -269,7 +269,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 300,
       pricePerPersonMinor: 14_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-cocora/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-cocora/1200/800',
       tags: ['naturaleza', 'aventura'],
     },
     {
@@ -278,7 +278,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 180,
       pricePerPersonMinor: 12_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-cabalgata/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-cabalgata/1200/800',
       tags: ['aventura', 'naturaleza'],
     },
     {
@@ -287,7 +287,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 120,
       pricePerPersonMinor: 5_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-tejido/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-tejido/1200/800',
       tags: ['cultura', 'artesania'],
     },
   ],
@@ -298,7 +298,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 150,
       pricePerPersonMinor: 8_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-comuna13/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-comuna13/1200/800',
       tags: ['cultura', 'historia'],
     },
     {
@@ -307,7 +307,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'HIGH',
       durationMinutes: 180,
       pricePerPersonMinor: 22_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-parapente/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-parapente/1200/800',
       tags: ['aventura'],
     },
     {
@@ -316,7 +316,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 120,
       pricePerPersonMinor: 6_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-plaza-minorista/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-plaza-minorista/1200/800',
       tags: ['gastronomia', 'cultura'],
     },
     {
@@ -325,7 +325,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 240,
       pricePerPersonMinor: 15_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-noche/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-noche/1200/800',
       tags: ['vida-nocturna', 'gastronomia'],
     },
   ],
@@ -336,7 +336,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 240,
       pricePerPersonMinor: 18_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-johnny-cay/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-johnny-cay/1200/800',
       tags: ['playa', 'buceo'],
     },
     {
@@ -345,7 +345,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'HIGH',
       durationMinutes: 300,
       pricePerPersonMinor: 32_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-buceo/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-buceo/1200/800',
       tags: ['buceo', 'aventura'],
     },
     {
@@ -354,7 +354,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 240,
       pricePerPersonMinor: 10_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-carrito/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-carrito/1200/800',
       tags: ['playa'],
     },
     {
@@ -363,7 +363,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 300,
       pricePerPersonMinor: 16_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-acuario/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-acuario/1200/800',
       tags: ['playa', 'naturaleza'],
     },
   ],
@@ -374,7 +374,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'HIGH',
       durationMinutes: 480,
       pricePerPersonMinor: 24_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-tayrona/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-tayrona/1200/800',
       tags: ['naturaleza', 'playa'],
     },
     {
@@ -383,7 +383,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 180,
       pricePerPersonMinor: 9_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-tubing/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-tubing/1200/800',
       tags: ['aventura', 'naturaleza'],
     },
     {
@@ -392,7 +392,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'LOW',
       durationMinutes: 150,
       pricePerPersonMinor: 7_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-santa-marta-tour/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-santa-marta-tour/1200/800',
       tags: ['historia', 'cultura'],
     },
     {
@@ -401,7 +401,7 @@ const activities: Record<string, ActivitySeed[]> = {
       intensity: 'MEDIUM',
       durationMinutes: 360,
       pricePerPersonMinor: 15_000_000,
-      imageUrl: 'https://picsum.photos/seed/turiviaje-playa-cristal/1200/800',
+      imageUrl: 'https://picsum.photos/seed/trazo-playa-cristal/1200/800',
       tags: ['playa', 'naturaleza'],
     },
   ],

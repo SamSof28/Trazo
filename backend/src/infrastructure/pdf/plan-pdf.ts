@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import type { Money, PlanReportDto } from '@turiviaje/shared';
+import type { Money, PlanReportDto } from '@trazo/shared';
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
@@ -177,7 +177,7 @@ class PdfDocument {
       '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
 
     this.pages.forEach((commands, index) => {
-      const footer = `BT /F1 8 Tf 0.45 0.5 0.55 rg ${MARGIN} 30 Td (TuriViajes - pagina ${index + 1} de ${this.pages.length}) Tj ET`;
+      const footer = `BT /F1 8 Tf 0.45 0.5 0.55 rg ${MARGIN} 30 Td (Trazo - pagina ${index + 1} de ${this.pages.length}) Tj ET`;
       const stream = [...commands, footer].join('\n');
       objects[pageIds[index]!] =
         `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentIds[index]} 0 R >>`;
@@ -207,7 +207,7 @@ class PdfDocument {
 export function renderPlanPdf(report: PlanReportDto): Buffer {
   const doc = new PdfDocument();
 
-  doc.text('TuriViajes', { size: 10, bold: true, color: [0.05, 0.45, 0.42], gap: 2 });
+  doc.text('Trazo', { size: 10, bold: true, color: [0.05, 0.45, 0.42], gap: 2 });
   doc.text(report.title ?? 'Plan turístico', { size: 22, bold: true, gap: 6 });
   doc.text(
     `${report.destination}  |  ${statusLabel(report.status)}  |  ${formatDate(report.generatedAt)}`,

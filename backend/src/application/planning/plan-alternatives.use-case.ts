@@ -2,7 +2,7 @@ import type {
   PlanAlternativeDto,
   PlanAlternativesResponse,
   PlanItemType,
-} from '@turiviaje/shared';
+} from '@trazo/shared';
 import type { AccessTokenPayload } from '../../domain/identity/ports.js';
 import type {
   ActivityRepository,

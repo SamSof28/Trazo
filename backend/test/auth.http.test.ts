@@ -25,14 +25,14 @@ describe('HTTP auth', () => {
   it('logs in and sets an HttpOnly refresh cookie without exposing the password hash', async () => {
     const { app } = buildTestApp();
     const response = await request(app).post('/api/v1/auth/login').send({
-      email: '  ASESOR@TURIVIAJE.CO ',
+      email: '  ASESOR@TRAZO.CO ',
       password: 'secret-password',
     });
 
     expect(response.status).toBe(200);
     expect(response.body.accessToken).toBeTypeOf('string');
     expect(response.body.expiresIn).toBe(900);
-    expect(response.body.user.email).toBe('asesor@turiviaje.co');
+    expect(response.body.user.email).toBe('asesor@trazo.co');
     expect(response.body.user).not.toHaveProperty('passwordHash');
 
     const cookies = response.headers['set-cookie'];
@@ -61,19 +61,19 @@ describe('HTTP auth', () => {
     expect(anonymous.status).toBe(401);
     expect(anonymous.body.code).toBe('UNAUTHENTICATED');
 
-    const { accessToken } = await loginAs(app, 'asesor@turiviaje.co');
+    const { accessToken } = await loginAs(app, 'asesor@trazo.co');
     const me = await request(app)
       .get('/api/v1/auth/me')
       .set('Authorization', `Bearer ${accessToken}`);
 
     expect(me.status).toBe(200);
-    expect(me.body.user.email).toBe('asesor@turiviaje.co');
+    expect(me.body.user.email).toBe('asesor@trazo.co');
     expect(me.body.user.role).toBe('ADVISOR');
   });
 
   it('rotates the refresh cookie and rejects a missing refresh token', async () => {
     const { app } = buildTestApp();
-    const { cookie } = await loginAs(app, 'asesor@turiviaje.co');
+    const { cookie } = await loginAs(app, 'asesor@trazo.co');
 
     const refreshed = await request(app).post('/api/v1/auth/refresh').set('Cookie', cookie);
     expect(refreshed.status).toBe(200);
@@ -87,7 +87,7 @@ describe('HTTP auth', () => {
 
   it('logs out idempotently', async () => {
     const { app } = buildTestApp();
-    const { cookie } = await loginAs(app, 'asesor@turiviaje.co');
+    const { cookie } = await loginAs(app, 'asesor@trazo.co');
 
     const response = await request(app).post('/api/v1/auth/logout').set('Cookie', cookie);
     expect(response.status).toBe(204);
@@ -95,15 +95,15 @@ describe('HTTP auth', () => {
 
   it('forbids ADVISOR from creating users and allows ADMIN', async () => {
     const { app } = buildTestApp();
-    const advisor = await loginAs(app, 'asesor@turiviaje.co');
-    const admin = await loginAs(app, 'admin@turiviaje.co');
+    const advisor = await loginAs(app, 'asesor@trazo.co');
+    const admin = await loginAs(app, 'admin@trazo.co');
 
     const forbidden = await request(app)
       .post('/api/v1/users')
       .set('Authorization', `Bearer ${advisor.accessToken}`)
       .send({
         name: 'Nuevo Asesor',
-        email: 'nuevo@turiviaje.co',
+        email: 'nuevo@trazo.co',
         password: 'password-larga-123',
         role: 'ADVISOR',
       });
@@ -115,13 +115,13 @@ describe('HTTP auth', () => {
       .set('Authorization', `Bearer ${admin.accessToken}`)
       .send({
         name: 'Nuevo Asesor',
-        email: 'nuevo@turiviaje.co',
+        email: 'nuevo@trazo.co',
         password: 'password-larga-123',
         role: 'ADVISOR',
       });
 
     expect(created.status).toBe(201);
-    expect(created.body.user.email).toBe('nuevo@turiviaje.co');
+    expect(created.body.user.email).toBe('nuevo@trazo.co');
     expect(created.body.user).not.toHaveProperty('passwordHash');
   });
 });

@@ -6,7 +6,7 @@ import type {
   ListDestinationsQuery,
   Paginated,
   UpdateDestinationInput,
-} from '@turiviaje/shared';
+} from '@trazo/shared';
 import type { CreateDestinationUseCase } from '../../application/catalog/create-destination.use-case.js';
 import type { DeactivateDestinationUseCase } from '../../application/catalog/deactivate-destination.use-case.js';
 import type { GetDestinationUseCase } from '../../application/catalog/get-destination.use-case.js';

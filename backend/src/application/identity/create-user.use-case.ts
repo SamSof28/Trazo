@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Role } from '@turiviaje/shared';
+import type { Role } from '@trazo/shared';
 import { ConflictError } from '../../domain/shared/app-error.js';
 import type { Clock, PasswordHasher, UserRepository } from '../../domain/identity/ports.js';
 import { User } from '../../domain/identity/user.js';

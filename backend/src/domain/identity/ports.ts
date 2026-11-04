@@ -1,4 +1,4 @@
-import type { Role } from '@turiviaje/shared';
+import type { Role } from '@trazo/shared';
 import type { Clock } from '../shared/clock.js';
 import type { User } from './user.js';
 

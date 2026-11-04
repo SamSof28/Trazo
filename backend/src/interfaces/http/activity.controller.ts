@@ -6,7 +6,7 @@ import type {
   ListActivitiesQuery,
   Paginated,
   UpdateActivityInput,
-} from '@turiviaje/shared';
+} from '@trazo/shared';
 import type { CreateActivityUseCase } from '../../application/catalog/create-activity.use-case.js';
 import type { DeactivateActivityUseCase } from '../../application/catalog/deactivate-activity.use-case.js';
 import type { ListActivitiesUseCase } from '../../application/catalog/list-activities.use-case.js';

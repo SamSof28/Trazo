@@ -6,7 +6,7 @@ import type {
   ListHotelsQuery,
   Paginated,
   UpdateHotelInput,
-} from '@turiviaje/shared';
+} from '@trazo/shared';
 import type { CreateHotelUseCase } from '../../application/catalog/create-hotel.use-case.js';
 import type { DeactivateHotelUseCase } from '../../application/catalog/deactivate-hotel.use-case.js';
 import type { ListHotelsUseCase } from '../../application/catalog/list-hotels.use-case.js';

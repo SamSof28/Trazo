@@ -1,4 +1,4 @@
-import type { PlanItemType, PlanStatus, PricingUnit } from '@turiviaje/shared';
+import type { PlanItemType, PlanStatus, PricingUnit } from '@trazo/shared';
 import {
   assertPrice,
   normalizeCurrency,

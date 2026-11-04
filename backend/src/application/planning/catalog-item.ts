@@ -1,4 +1,4 @@
-import type { PlanItemType, PricingUnit } from '@turiviaje/shared';
+import type { PlanItemType, PricingUnit } from '@trazo/shared';
 import type {
   ActivityRepository,
   HotelRepository,

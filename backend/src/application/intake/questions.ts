@@ -1,4 +1,4 @@
-import type { IntakeQuestion, MissingField } from '@turiviaje/shared';
+import type { IntakeQuestion, MissingField } from '@trazo/shared';
 import type { Destination } from '../../domain/catalog/destination.js';
 
 const PROMPTS: Record<MissingField, string> = {

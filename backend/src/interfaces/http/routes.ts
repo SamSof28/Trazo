@@ -29,7 +29,7 @@ import {
   updatePlanItemSchema,
   updatePlanSchema,
   updateTransportOptionSchema,
-} from '@turiviaje/shared';
+} from '@trazo/shared';
 import type { AccessTokenService } from '../../domain/identity/ports.js';
 import type { ActivityController } from './activity.controller.js';
 import type { AuthController } from './auth.controller.js';

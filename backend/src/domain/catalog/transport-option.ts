@@ -1,4 +1,4 @@
-import type { PricingUnit, TransportMode } from '@turiviaje/shared';
+import type { PricingUnit, TransportMode } from '@trazo/shared';
 import { ValidationError } from '../shared/app-error.js';
 import { assertDuration, assertPrice, normalizeCurrency, normalizeText } from './values.js';
 

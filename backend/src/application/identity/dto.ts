@@ -1,4 +1,4 @@
-import type { PublicUser } from '@turiviaje/shared';
+import type { PublicUser } from '@trazo/shared';
 
 export interface AuthResult {
   accessToken: string;

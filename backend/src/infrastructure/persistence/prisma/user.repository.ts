@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client';
-import type { Role } from '@turiviaje/shared';
+import type { Role } from '@trazo/shared';
 import type { CreateUserInput, UserRepository } from '../../../domain/identity/ports.js';
 import { User } from '../../../domain/identity/user.js';
 import { ConflictError } from '../../../domain/shared/app-error.js';

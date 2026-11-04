@@ -11,7 +11,7 @@ import type {
   ReplacePlanItemInput,
   UpdatePlanInput,
   UpdatePlanItemInput,
-} from '@turiviaje/shared';
+} from '@trazo/shared';
 import type { AddPlanItemUseCase, MovePlanItemUseCase, RemovePlanItemUseCase, ReplacePlanItemUseCase, UpdatePlanItemUseCase } from '../../application/planning/plan-items.use-cases.js';
 import type { ListPlanAlternativesUseCase } from '../../application/planning/plan-alternatives.use-case.js';
 import type { ArchivePlanUseCase, DuplicatePlanUseCase, PublishPlanUseCase, SavePlanUseCase } from '../../application/planning/plan-lifecycle.use-cases.js';

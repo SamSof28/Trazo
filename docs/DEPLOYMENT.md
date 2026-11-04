@@ -1,6 +1,6 @@
 # Despliegue — Supabase, backend y Vercel
 
-Guía para llevar TuriViajes de local a producción. Cubre la base de datos en Supabase, las migraciones,
+Guía para llevar Trazo de local a producción. Cubre la base de datos en Supabase, las migraciones,
 el seed, el hosting del backend y el despliegue del SPA en Vercel.
 
 > **Estado:** el backend está completo y probado con fakes, pero **las migraciones y el seed todavía no
@@ -22,9 +22,9 @@ cookie `HttpOnly; SameSite=Strict` del refresh funciona y no hace falta CORS cro
 
 ```text
 Navegador
-  └─ https://turiviaje.vercel.app
+  └─ https://trazo.vercel.app
        ├─ /              → SPA estático (Vercel)
-       └─ /api/v1/*      → rewrite a https://turiviaje-api.onrender.com/api/v1/*
+       └─ /api/v1/*      → rewrite a https://trazo-api.onrender.com/api/v1/*
                               └─ Supabase Postgres (pooler :6543)
 ```
 
@@ -178,7 +178,7 @@ Ejemplo con Render:
 ```dotenv
 NODE_ENV=production
 # PORT lo inyecta el host; no lo fijes en Render/Railway.
-CORS_ORIGINS=https://turiviaje.vercel.app
+CORS_ORIGINS=https://trazo.vercel.app
 TRUST_PROXY=true
 
 DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true
@@ -251,7 +251,7 @@ El SPA debe llamar a `/api/v1/*` en el mismo origen. En el `vercel.json` del pro
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://turiviaje-api.onrender.com/api/:path*"
+      "destination": "https://trazo-api.onrender.com/api/:path*"
     }
   ]
 }
@@ -329,7 +329,7 @@ Detalle del prompt, grounding y reparación: [`AI.md`](AI.md).
 
 ## 8. Smoke test de producción
 
-Sustituye `$API` por la URL pública (o por `https://turiviaje.vercel.app/api/v1` si usas el rewrite).
+Sustituye `$API` por la URL pública (o por `https://trazo.vercel.app/api/v1` si usas el rewrite).
 
 ```bash
 # 1. Salud
@@ -339,7 +339,7 @@ curl -sS "$API/health/ready"
 # 2. Login del admin (guarda la cookie de refresh)
 curl -sS -c cookies.txt -X POST "$API/auth/login" \
   -H 'Content-Type: application/json' \
-  -d '{"email":"admin@turiviaje.co","password":"<password>"}'
+  -d '{"email":"admin@trazo.co","password":"<password>"}'
 
 # 3. Crear una solicitud completa
 curl -sS -b cookies.txt -X POST "$API/trip-requests" \

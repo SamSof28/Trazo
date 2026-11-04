@@ -6,7 +6,7 @@ import type {
   TransportOptionDto,
   TransportOptionResponse,
   UpdateTransportOptionInput,
-} from '@turiviaje/shared';
+} from '@trazo/shared';
 import type { CreateTransportOptionUseCase } from '../../application/catalog/create-transport-option.use-case.js';
 import type { DeactivateTransportOptionUseCase } from '../../application/catalog/deactivate-transport-option.use-case.js';
 import type { ListTransportOptionsUseCase } from '../../application/catalog/list-transport-options.use-case.js';

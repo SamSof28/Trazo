@@ -4,12 +4,12 @@ import { buildTestApp, loginAs } from './test-app.js';
 import { makeTripRequest } from './intake-fakes.js';
 
 async function advisorToken(app: Parameters<typeof loginAs>[0]): Promise<string> {
-  const { accessToken } = await loginAs(app, 'asesor@turiviaje.co');
+  const { accessToken } = await loginAs(app, 'asesor@trazo.co');
   return accessToken;
 }
 
 async function adminToken(app: Parameters<typeof loginAs>[0]): Promise<string> {
-  const { accessToken } = await loginAs(app, 'admin@turiviaje.co');
+  const { accessToken } = await loginAs(app, 'admin@trazo.co');
   return accessToken;
 }
 

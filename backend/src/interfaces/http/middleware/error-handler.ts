@@ -1,6 +1,6 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { ZodError } from 'zod';
-import type { ProblemDetails } from '@turiviaje/shared';
+import type { ProblemDetails } from '@trazo/shared';
 import { logger } from '../../../config/logger.js';
 import { AppError, ValidationError } from '../../../domain/shared/app-error.js';
 
@@ -18,7 +18,7 @@ function problem(
   errors?: ProblemDetails['errors'],
 ): ProblemDetails {
   return {
-    type: `https://api.turiviaje.co/problems/${code.toLowerCase()}`,
+    type: `https://api.trazo.co/problems/${code.toLowerCase()}`,
     title,
     status,
     code,

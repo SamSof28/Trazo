@@ -1,4 +1,4 @@
-import type { ErrorCode } from '@turiviaje/shared';
+import type { ErrorCode } from '@trazo/shared';
 
 export class AppError extends Error {
   constructor(

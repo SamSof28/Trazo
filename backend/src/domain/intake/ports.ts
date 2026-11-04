@@ -1,4 +1,4 @@
-import type { TripRequestStatus } from '@turiviaje/shared';
+import type { TripRequestStatus } from '@trazo/shared';
 import type { TripRequest } from './trip-request.js';
 
 export interface TripRequestPage<T> {

@@ -71,7 +71,7 @@ curl -i http://localhost:3000/health/ready
    DATABASE_URL="postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true"
    DIRECT_URL="postgresql://postgres:<password>@db.<ref>.supabase.co:5432/postgres"
    JWT_ACCESS_SECRET="<openssl rand -base64 48>"
-   ADMIN_EMAIL="admin@turiviaje.co"
+   ADMIN_EMAIL="admin@trazo.co"
    ADMIN_PASSWORD="<mínimo 12 caracteres>"
    ```
 
@@ -399,7 +399,7 @@ El contrato completo de planes, ítems, ciclo de vida y reportes está en
 POST /api/v1/auth/login
 Content-Type: application/json
 
-{ "email": "admin@turiviaje.co", "password": "ChangeMe12345!" }
+{ "email": "admin@trazo.co", "password": "ChangeMe12345!" }
 ```
 
 ```http
@@ -412,7 +412,7 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/a
   "user": {
     "id": "uuid",
     "name": "Administrador",
-    "email": "admin@turiviaje.co",
+    "email": "admin@trazo.co",
     "role": "ADMIN",
     "isActive": true,
     "createdAt": "2026-11-02T15:00:00.000Z",
@@ -718,7 +718,7 @@ carrusel y los pines del mapa:
 
 ```ts
 // frontend/src/features/catalog/api.ts
-import type { DestinationDto, Paginated } from '@turiviaje/shared';
+import type { DestinationDto, Paginated } from '@trazo/shared';
 import { apiFetch } from '../../shared/api/client';
 
 export async function fetchFeaturedDestinations(): Promise<Paginated<DestinationDto>> {
@@ -759,7 +759,7 @@ import type {
   TripRequestAnswer,
   TripRequestDto,
   TripRequestResponse,
-} from '@turiviaje/shared';
+} from '@trazo/shared';
 import { apiFetch } from '../../shared/api/client';
 
 export async function createTripRequest(prompt: string): Promise<TripRequestDto> {
@@ -804,7 +804,7 @@ import type {
   PlanGenerationAccepted,
   PlanResponse,
   TripRequestDto,
-} from '@turiviaje/shared';
+} from '@trazo/shared';
 import { apiFetch } from '../../shared/api/client';
 
 export async function generatePlan(tripRequestId: string): Promise<PlanGenerationAccepted> {
@@ -860,7 +860,7 @@ Todos los errores usan `application/problem+json`:
 
 ```json
 {
-  "type": "https://api.turiviaje.co/problems/validation_error",
+  "type": "https://api.trazo.co/problems/validation_error",
   "title": "Datos inválidos",
   "status": 422,
   "code": "VALIDATION_ERROR",
@@ -952,9 +952,9 @@ router.get(
 
 ```bash
 npm run verify                 # lint → typecheck → test → build
-npm run test -w @turiviaje/backend
-npm run test -w @turiviaje/backend -- test/auth.http.test.ts
-npm run test -w @turiviaje/backend -- -t "rotates"
+npm run test -w @trazo/backend
+npm run test -w @trazo/backend -- test/auth.http.test.ts
+npm run test -w @trazo/backend -- -t "rotates"
 npm run lint
 npm run typecheck
 npm run build
