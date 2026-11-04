@@ -201,7 +201,7 @@ Ejemplo con Render:
 
 | Campo | Valor |
 |---|---|
-| Repository | `https://github.com/SamSof28/SmartViaje.git` |
+| Repository | `https://github.com/SamSof28/Trazo.git` |
 | Branch | `main` |
 | Runtime | Node 22 |
 | Root Directory | raíz del repo (donde está `package.json`) |
