@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Trazo — Gestión de usuarios (Admin)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+*{box-sizing:border-box;margin:0}
+body{background:#F2F5F1;font-family:'DM Sans',sans-serif;color:#10262A}
+.t{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
+.go{font:700 15px 'DM Sans',sans-serif;color:#fff;background:#FF6B3D;border:0;border-radius:999px;min-height:44px;padding:0 22px;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.go:hover{transform:translateY(-2px);box-shadow:0 7px 0 #10262A}
+.go-dark{font:700 15px 'DM Sans',sans-serif;color:#fff;background:#10262A;border:0;border-radius:999px;min-height:50px;padding:0 28px;cursor:pointer;transition:transform .2s,box-shadow .2s;width:100%}
+.go-dark:hover{transform:translateY(-2px);box-shadow:0 8px 0 #FF6B3D}
+.out{font:500 14px 'DM Sans',sans-serif;color:#10262A;background:transparent;border:1.5px solid #D5DDD6;border-radius:999px;min-height:36px;padding:0 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.out:hover{background:#E3F3EE}
+.badge{font:700 11px 'DM Sans',sans-serif;border-radius:999px;padding:5px 10px;text-transform:uppercase;letter-spacing:.04em}
+.nav-link{font:500 15px 'DM Sans',sans-serif;color:#3F575B;text-decoration:none;padding:8px 14px;border-radius:999px;transition:background .2s}
+.nav-link:hover,.nav-link.active{background:#E3F3EE;color:#10262A;font-weight:700}
+.fld{width:100%;min-height:50px;border:1.5px solid #D5DDD6;border-radius:999px;background:#fff;padding:0 22px;font:400 16px 'DM Sans',sans-serif;color:#10262A}
+.fld:focus-visible{outline:3px solid #FF6B3D;outline-offset:2px;border-color:#10262A}
+.lb{display:block;font:700 13px 'DM Sans',sans-serif;margin:0 0 6px 6px}
+.ib{width:40px;height:40px;border-radius:50%;border:0;background:transparent;cursor:pointer;display:grid;place-items:center;color:#10262A}
+.ib:hover{background:#E3F3EE}
+.go:focus-visible,.go-dark:focus-visible,.out:focus-visible,.ib:focus-visible,.nav-link:focus-visible{outline:3px solid #FF6B3D;outline-offset:3px}
+table{width:100%;border-collapse:separate;border-spacing:0}
+th{text-align:left;font:700 13px 'DM Sans',sans-serif;color:#3F575B;padding:12px 16px;border-bottom:2px solid #D5DDD6;text-transform:uppercase;letter-spacing:.04em}
+td{padding:14px 16px;border-bottom:1px solid #E3EAE4;font-size:15px;vertical-align:middle}
+tr:hover td{background:#E3F3EE44}
+</style>
+</head>
+<body>
+
+<!-- ===== NAV BAR ===== -->
+<nav style="background:#fff;border-bottom:1px solid #E3EAE4;padding:0 32px;display:flex;align-items:center;gap:16px;min-height:64px;position:sticky;top:0;z-index:50">
+  <span class="t" style="display:flex;align-items:center;gap:8px;font-size:20px;font-weight:800;margin-right:16px">
+    <svg width="28" height="28" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="17" fill="#10262A"/><path d="M7 24C12 8 20 28 27 10" stroke="#FF6B3D" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 6"/><circle cx="27" cy="10" r="3" fill="#9ADBCB"/></svg>
+    trazo
+  </span>
+  <a class="nav-link" href="#">Mis planes</a>
+  <a class="nav-link" href="#">Catálogo</a>
+  <a class="nav-link active" href="#">Usuarios</a>
+  <span style="flex:1"></span>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="width:36px;height:36px;border-radius:50%;background:#FF6B3D;color:#fff;display:grid;place-items:center;font-weight:700;font-size:14px">AD</div>
+    <div style="font-size:14px"><b>Admin</b><br><span style="font-size:12px;color:#3F575B">Administrador</span></div>
+  </div>
+</nav>
+
+<!-- ===== CONTENIDO ===== -->
+<div style="max-width:1100px;margin:0 auto;padding:28px 32px">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:24px">
+    <h1 class="t" style="font-size:36px;font-weight:800">Equipo</h1>
+    <button class="go" type="button" style="font-size:14px;min-height:40px" onclick="document.getElementById('modal').style.display='flex'">+ Nuevo asesor</button>
+  </div>
+
+  <!-- Stats -->
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:28px">
+    <div style="flex:1;min-width:160px;background:#fff;border-radius:18px;padding:18px 22px;border:1px solid #E3EAE4">
+      <div style="font-size:13px;color:#3F575B">Total asesores</div>
+      <div class="t" style="font-size:32px;font-weight:800;margin-top:4px">4</div>
+    </div>
+    <div style="flex:1;min-width:160px;background:#fff;border-radius:18px;padding:18px 22px;border:1px solid #E3EAE4">
+      <div style="font-size:13px;color:#3F575B">Activos</div>
+      <div class="t" style="font-size:32px;font-weight:800;margin-top:4px;color:#10262A">3</div>
+    </div>
+    <div style="flex:1;min-width:160px;background:#fff;border-radius:18px;padding:18px 22px;border:1px solid #E3EAE4">
+      <div style="font-size:13px;color:#3F575B">Planes esta semana</div>
+      <div class="t" style="font-size:32px;font-weight:800;margin-top:4px;color:#FF6B3D">12</div>
+    </div>
+  </div>
+
+  <!-- Tabla de usuarios -->
+  <div style="background:#fff;border-radius:24px;overflow:hidden;border:1px solid #E3EAE4">
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Email</th>
+          <th>Rol</th>
+          <th>Estado</th>
+          <th>Último acceso</th>
+          <th style="width:100px">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:34px;height:34px;border-radius:50%;background:#FF6B3D;color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none">AD</div>
+              <b>Administrador</b>
+            </div>
+          </td>
+          <td>admin@trazo.co</td>
+          <td><span class="badge" style="background:#FF6B3D22;color:#E8501F">Admin</span></td>
+          <td><span class="badge" style="background:#9ADBCB;color:#10262A">Activo</span></td>
+          <td style="font-size:14px;color:#3F575B">Hoy, 10:15 a.m.</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:34px;height:34px;border-radius:50%;background:#9ADBCB;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none">MG</div>
+              <b>María Gómez</b>
+            </div>
+          </td>
+          <td>maria@agencia.co</td>
+          <td><span class="badge" style="background:#E3F3EE;color:#10262A">Asesor</span></td>
+          <td><span class="badge" style="background:#9ADBCB;color:#10262A">Activo</span></td>
+          <td style="font-size:14px;color:#3F575B">Hoy, 09:42 a.m.</td>
+          <td><button class="out" style="min-height:30px;padding:0 10px;font-size:12px;color:#E8501F;border-color:#E8501F">Desactivar</button></td>
+        </tr>
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:34px;height:34px;border-radius:50%;background:#FFD36B;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none">CP</div>
+              <b>Carlos Pérez</b>
+            </div>
+          </td>
+          <td>carlos@agencia.co</td>
+          <td><span class="badge" style="background:#E3F3EE;color:#10262A">Asesor</span></td>
+          <td><span class="badge" style="background:#9ADBCB;color:#10262A">Activo</span></td>
+          <td style="font-size:14px;color:#3F575B">Ayer, 16:30</td>
+          <td><button class="out" style="min-height:30px;padding:0 10px;font-size:12px;color:#E8501F;border-color:#E8501F">Desactivar</button></td>
+        </tr>
+        <tr style="opacity:.55">
+          <td>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:34px;height:34px;border-radius:50%;background:#D5DDD6;display:grid;place-items:center;font-weight:700;font-size:13px;flex:none;color:#3F575B">LR</div>
+              <span style="color:#3F575B"><b>Laura Ríos</b></span>
+            </div>
+          </td>
+          <td style="color:#3F575B">laura@agencia.co</td>
+          <td><span class="badge" style="background:#D5DDD655;color:#3F575B">Asesor</span></td>
+          <td><span class="badge" style="background:#D5DDD6;color:#3F575B">Inactivo</span></td>
+          <td style="font-size:14px;color:#3F575B">28 oct 2026</td>
+          <td><button class="out" style="min-height:30px;padding:0 10px;font-size:12px">Reactivar</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ===== MODAL: CREAR ASESOR ===== -->
+<div id="modal" style="display:none;position:fixed;inset:0;background:#10262A88;align-items:center;justify-content:center;z-index:100;padding:24px">
+  <div style="background:#F2F5F1;border-radius:32px;padding:32px 36px;max-width:480px;width:100%;box-shadow:0 40px 80px -30px #000a">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+      <h2 class="t" style="font-size:28px;font-weight:800">Nuevo asesor</h2>
+      <button class="ib" type="button" aria-label="Cerrar" onclick="document.getElementById('modal').style.display='none'">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10262A" stroke-width="2.2" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg>
+      </button>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div>
+        <label class="lb" for="nm">Nombre completo</label>
+        <input id="nm" class="fld" type="text" placeholder="Ana López" autocomplete="name">
+      </div>
+      <div>
+        <label class="lb" for="em">Correo electrónico</label>
+        <input id="em" class="fld" type="email" placeholder="ana@agencia.co" autocomplete="email">
+      </div>
+      <div>
+        <label class="lb" for="pw">Contraseña</label>
+        <div style="position:relative">
+          <input id="pw" class="fld" type="password" placeholder="Mínimo 12 caracteres" autocomplete="new-password" style="padding-right:56px">
+          <button class="ib" type="button" aria-label="Mostrar contraseña" style="position:absolute;right:6px;top:5px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10262A" stroke-width="2"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div style="margin:6px 6px 0;font-size:12px;color:#3F575B">Mínimo 12 caracteres. Combina mayúsculas, números y símbolos.</div>
+      </div>
+      <div>
+        <label class="lb">Rol</label>
+        <div style="display:flex;gap:8px">
+          <button class="out" type="button" style="flex:1;justify-content:center;min-height:44px;background:#10262A;color:#fff;border-color:#10262A;font-weight:700">Asesor</button>
+          <button class="out" type="button" style="flex:1;justify-content:center;min-height:44px">Admin</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="go-dark" type="button" style="margin-top:24px">Crear cuenta</button>
+    <p style="margin:14px 0 0;text-align:center;font-size:13px;color:#3F575B">Se enviará un correo de bienvenida al nuevo asesor.</p>
+  </div>
+</div>
+
+</body>
+</html>

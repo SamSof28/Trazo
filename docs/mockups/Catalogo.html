@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Trazo — Explorador de catálogo</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+*{box-sizing:border-box;margin:0}
+body{background:#F2F5F1;font-family:'DM Sans',sans-serif;color:#10262A}
+.t{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
+.chip{font:500 14px 'DM Sans',sans-serif;color:#10262A;background:#fff;border:1.5px solid #D5DDD6;border-radius:999px;padding:8px 16px;cursor:pointer;transition:transform .2s,background .2s}
+.chip:hover{background:#E3F3EE}
+.go{font:700 15px 'DM Sans',sans-serif;color:#fff;background:#FF6B3D;border:0;border-radius:999px;min-height:44px;padding:0 22px;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.go:hover{transform:translateY(-2px);box-shadow:0 7px 0 #10262A}
+.out{font:500 14px 'DM Sans',sans-serif;color:#10262A;background:transparent;border:1.5px solid #D5DDD6;border-radius:999px;min-height:38px;padding:0 16px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.out:hover{background:#E3F3EE}
+.badge{font:700 11px 'DM Sans',sans-serif;border-radius:999px;padding:5px 10px;text-transform:uppercase;letter-spacing:.04em}
+.tag{font:500 13px 'DM Sans',sans-serif;border-radius:999px;padding:5px 12px;background:#E3F3EE;color:#10262A;display:inline-block}
+.card{background:#fff;border-radius:24px;overflow:hidden;border:1px solid #E3EAE4;transition:box-shadow .2s,transform .2s;cursor:pointer}
+.card:hover{transform:translateY(-3px);box-shadow:0 16px 32px -16px #10262A22}
+.nav-link{font:500 15px 'DM Sans',sans-serif;color:#3F575B;text-decoration:none;padding:8px 14px;border-radius:999px;transition:background .2s}
+.nav-link:hover,.nav-link.active{background:#E3F3EE;color:#10262A;font-weight:700}
+.tab{font:700 15px 'DM Sans',sans-serif;padding:12px 22px;border:0;border-radius:999px;cursor:pointer;background:transparent;color:#3F575B;transition:background .2s}
+.tab:hover{background:#E3F3EE}
+.tab.active{background:#10262A;color:#fff}
+.fld{min-height:44px;border:1.5px solid #D5DDD6;border-radius:999px;padding:0 18px;font:400 15px 'DM Sans',sans-serif;color:#10262A;background:#fff}
+.fld:focus-visible{outline:3px solid #FF6B3D;outline-offset:2px;border-color:#10262A}
+.go:focus-visible,.out:focus-visible,.chip:focus-visible,.tab:focus-visible,.card:focus-visible{outline:3px solid #FF6B3D;outline-offset:3px}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)!important}}
+@media(max-width:560px){.grid{grid-template-columns:1fr!important}}
+</style>
+</head>
+<body>
+
+<!-- ===== NAV BAR ===== -->
+<nav style="background:#fff;border-bottom:1px solid #E3EAE4;padding:0 32px;display:flex;align-items:center;gap:16px;min-height:64px;position:sticky;top:0;z-index:50">
+  <span class="t" style="display:flex;align-items:center;gap:8px;font-size:20px;font-weight:800;margin-right:16px">
+    <svg width="28" height="28" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="17" fill="#10262A"/><path d="M7 24C12 8 20 28 27 10" stroke="#FF6B3D" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 6"/><circle cx="27" cy="10" r="3" fill="#9ADBCB"/></svg>
+    trazo
+  </span>
+  <a class="nav-link" href="#">Mis planes</a>
+  <a class="nav-link active" href="#">Catálogo</a>
+  <span style="flex:1"></span>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="width:36px;height:36px;border-radius:50%;background:#9ADBCB;display:grid;place-items:center;font-weight:700;font-size:14px">MG</div>
+    <span style="font-size:14px;font-weight:500">María</span>
+  </div>
+</nav>
+
+<!-- ===== CONTENIDO ===== -->
+<div style="max-width:1200px;margin:0 auto;padding:28px 32px">
+
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:20px">
+    <h1 class="t" style="font-size:36px;font-weight:800">Catálogo</h1>
+    <!-- Visible solo para ADMIN -->
+    <button class="go" type="button" style="font-size:14px;min-height:40px">+ Nuevo destino</button>
+  </div>
+
+  <!-- Pestañas de categoría -->
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px">
+    <button class="tab active" type="button">🌎 Destinos</button>
+    <button class="tab" type="button">🏨 Hoteles</button>
+    <button class="tab" type="button">🎯 Actividades</button>
+    <button class="tab" type="button">✈️ Transporte</button>
+  </div>
+
+  <!-- Filtros de destinos -->
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:24px">
+    <input class="fld" type="search" placeholder="Buscar destino…" style="flex:1;min-width:200px;max-width:320px">
+    <select class="fld" style="width:auto;min-width:160px;padding-right:36px;appearance:auto">
+      <option>Todos los países</option>
+      <option selected>Colombia</option>
+    </select>
+    <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer">
+      <input type="checkbox" style="width:18px;height:18px;accent-color:#10262A"> Solo destacados
+    </label>
+  </div>
+
+  <!-- Grid de destinos -->
+  <div class="grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px">
+
+    <!-- Destino 1 -->
+    <div class="card" tabindex="0">
+      <div style="height:160px;background:linear-gradient(135deg,#CFEAE3,#9ADBCB);position:relative">
+        <span class="badge" style="position:absolute;top:12px;right:12px;background:#FFD36B;color:#10262A">⭐ Destacado</span>
+        <span class="badge" style="position:absolute;top:12px;left:12px;background:#9ADBCB;color:#10262A">Activo</span>
+      </div>
+      <div style="padding:16px 20px">
+        <div style="font-weight:700;font-size:17px">Cartagena</div>
+        <div style="font-size:13px;color:#3F575B;margin:2px 0 10px">Colombia · Lat 10.39, Lon -75.48</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+          <span class="tag" style="font-size:12px;padding:4px 10px">playa</span>
+          <span class="tag" style="font-size:12px;padding:4px 10px">historia</span>
+          <span class="tag" style="font-size:12px;padding:4px 10px">gastronomía</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:14px"><span style="color:#3F575B">Desde</span> <b>COP 520.000</b></div>
+          <!-- Solo ADMIN -->
+          <div style="display:flex;gap:4px">
+            <button class="out" style="min-height:30px;padding:0 10px;font-size:12px">Editar</button>
+            <button class="out" style="min-height:30px;padding:0 10px;font-size:12px;color:#E8501F;border-color:#E8501F">Desactivar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Destino 2 -->
+    <div class="card" tabindex="0">
+      <div style="height:160px;background:linear-gradient(135deg,#FFD36B44,#FFD36B);position:relative">
+        <span class="badge" style="position:absolute;top:12px;right:12px;background:#FFD36B;color:#10262A">⭐ Destacado</span>
+        <span class="badge" style="position:absolute;top:12px;left:12px;background:#9ADBCB;color:#10262A">Activo</span>
+      </div>
+      <div style="padding:16px 20px">
+        <div style="font-weight:700;font-size:17px">Eje Cafetero</div>
+        <div style="font-size:13px;color:#3F575B;margin:2px 0 10px">Colombia · Lat 4.81, Lon -75.69</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+          <span class="tag" style="font-size:12px;padding:4px 10px">naturaleza</span>
+          <span class="tag" style="font-size:12px;padding:4px 10px">café</span>
+          <span class="tag" style="font-size:12px;padding:4px 10px">aventura</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:14px"><span style="color:#3F575B">Desde</span> <b>COP 380.000</b></div>
+          <div style="display:flex;gap:4px">
+            <button class="out" style="min-height:30px;padding:0 10px;font-size:12px">Editar</button>
+            <button class="out" style="min-height:30px;padding:0 10px;font-size:12px;color:#E8501F;border-color:#E8501F">Desactivar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Destino 3 -->
+    <div class="card" tabindex="0">
+      <div style="height:160px;background:linear-gradient(135deg,#CFEAE3,#E3F3EE);position:relative">
+        <span class="badge" style="position:absolute;top:12px;left:12px;background:#9ADBCB;color:#10262A">Activo</span>
+      </div>
+      <div style="padding:16px 20px">
+        <div style="font-weight:700;font-size:17px">Medellín</div>
+        <div style="font-size:13px;color:#3F575B;margin:2px 0 10px">Colombia · Lat 6.25, Lon -75.56</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+          <span class="tag" style="font-size:12px;padding:4px 10px">cultura</span>
+          <span class="tag" style="font-size:12px;padding:4px 10px">innovación</span>
+          <span class="tag" style="font-size:12px;padding:4px 10px">vida nocturna</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:14px"><span style="color:#3F575B">Desde</span> <b>COP 290.000</b></div>
+          <div style="display:flex;gap:4px">
+            <button class="out" style="min-height:30px;padding:0 10px;font-size:12px">Editar</button>
+            <button class="out" style="min-height:30px;padding:0 10px;font-size:12px;color:#E8501F;border-color:#E8501F">Desactivar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Destino 4 -->
+    <div class="card" tabindex="0">
+      <div style="height:160px;background:linear-gradient(135deg,#9ADBCB55,#9ADBCB);position:relative">
+        <span class="badge" style="position:absolute;top:12px;right:12px;background:#FFD36B;color:#10262A">⭐ Destacado</span>
+        <span class="badge" style="position:absolute;top:12px;left:12px;background:#9ADBCB;color:#10262A">Activo</span>
+      </div>
+      <div style="padding:16px 20px">
+        <div style="font-weight:700;font-size:17px">San Andrés</div>
+        <div style="font-size:13px;color:#3F575B;margin:2px 0 10px">Colombia · Lat 12.58, Lon -81.70</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+          <span class="tag" style="font-size:12px;padding:4px 10px">playa</span>
+          <span class="tag" style="font-size:12px;padding:4px 10px">snorkel</span>
+          <span class="tag" style="font-size:12px;padding:4px 10px">todo incluido</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:14px"><span style="color:#3F575B">Desde</span> <b>COP 680.000</b></div>
+          <div style="display:flex;gap:4px">
+            <button class="out" style="min-height:30px;padding:0 10px;font-size:12px">Editar</button>
+            <button class="out" style="min-height:30px;padding:0 10px;font-size:12px;color:#E8501F;border-color:#E8501F">Desactivar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Destino 5 -->
+    <div class="card" tabindex="0">
+      <div style="height:160px;background:linear-gradient(135deg,#E3F3EE,#CFEAE3);position:relative">
+        <span class="badge" style="position:absolute;top:12px;left:12px;background:#9ADBCB;color:#10262A">Activo</span>
+      </div>
+      <div style="padding:16px 20px">
+        <div style="font-weight:700;font-size:17px">Santa Marta</div>
+        <div style="font-size:13px;color:#3F575B;margin:2px 0 10px">Colombia · Lat 11.24, Lon -74.20</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+          <span class="tag" style="font-size:12px;padding:4px 10px">playa</span>
+          <span class="tag" style="font-size:12px;padding:4px 10px">naturaleza</span>
+          <span class="tag" style="font-size:12px;padding:4px 10px">Tayrona</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:14px"><span style="color:#3F575B">Desde</span> <b>COP 410.000</b></div>
+          <div style="display:flex;gap:4px">
+            <button class="out" style="min-height:30px;padding:0 10px;font-size:12px">Editar</button>
+            <button class="out" style="min-height:30px;padding:0 10px;font-size:12px;color:#E8501F;border-color:#E8501F">Desactivar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Destino 6 inactivo -->
+    <div class="card" tabindex="0" style="opacity:.6">
+      <div style="height:160px;background:#D5DDD6;position:relative">
+        <span class="badge" style="position:absolute;top:12px;left:12px;background:#D5DDD6;color:#3F575B;border:1px solid #3F575B55">Inactivo</span>
+      </div>
+      <div style="padding:16px 20px">
+        <div style="font-weight:700;font-size:17px;color:#3F575B">Leticia (Amazonas)</div>
+        <div style="font-size:13px;color:#3F575B;margin:2px 0 10px">Colombia · Lat -4.21, Lon -69.94</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+          <span class="tag" style="font-size:12px;padding:4px 10px;background:#D5DDD655">naturaleza</span>
+          <span class="tag" style="font-size:12px;padding:4px 10px;background:#D5DDD655">selva</span>
+        </div>
+        <div style="display:flex;justify-content:flex-end;align-items:center">
+          <button class="out" style="min-height:30px;padding:0 10px;font-size:12px;color:#10262A">Reactivar</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</body>
+</html>

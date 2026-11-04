@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Trazo — Workspace: Intake conversacional</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+*{box-sizing:border-box;margin:0}
+body{background:#F2F5F1;font-family:'DM Sans',sans-serif;color:#10262A}
+.t{font-family:'Bricolage Grotesque',system-ui,sans-serif;letter-spacing:-0.02em}
+.chip{font:500 14px 'DM Sans',sans-serif;color:#10262A;background:#fff;border:1.5px solid #D5DDD6;border-radius:999px;padding:9px 16px;cursor:pointer;transition:transform .2s,background .2s}
+.chip:hover{background:#9ADBCB;transform:translateY(-2px) rotate(-2deg)}
+.go{font:700 16px 'DM Sans',sans-serif;color:#fff;background:#10262A;border:0;border-radius:999px;min-height:48px;padding:0 28px;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.go:hover{transform:translateY(-2px);box-shadow:0 8px 0 #FF6B3D}
+.go:focus-visible,.chip:focus-visible,.ib:focus-visible{outline:3px solid #FF6B3D;outline-offset:3px}
+.ib{width:40px;height:40px;border-radius:50%;border:0;background:transparent;cursor:pointer;display:grid;place-items:center;color:#10262A}
+.ib:hover{background:#E3F3EE}
+.badge{font:700 11px 'DM Sans',sans-serif;border-radius:999px;padding:4px 10px;text-transform:uppercase;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<div style="display:flex;height:100vh;overflow:hidden">
+
+<!-- ===== PANEL IZQUIERDO — CHAT ===== -->
+<aside style="width:420px;flex:none;display:flex;flex-direction:column;background:#fff;border-right:1px solid #D5DDD6">
+
+  <!-- Header del chat -->
+  <div style="padding:16px 20px;border-bottom:1px solid #E3EAE4;display:flex;align-items:center;gap:12px">
+    <span class="t" style="display:flex;align-items:center;gap:8px;font-size:20px;font-weight:800">
+      <svg width="28" height="28" viewBox="0 0 34 34" fill="none"><circle cx="17" cy="17" r="17" fill="#10262A"/><path d="M7 24C12 8 20 28 27 10" stroke="#FF6B3D" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 6"/><circle cx="27" cy="10" r="3" fill="#9ADBCB"/></svg>
+      trazo
+    </span>
+    <span style="flex:1"></span>
+    <span class="badge" style="background:#E3F3EE;color:#10262A">Nuevo viaje</span>
+  </div>
+
+  <!-- Mensajes -->
+  <div style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px">
+
+    <!-- Mensaje del asesor -->
+    <div style="align-self:flex-end;max-width:85%">
+      <div style="background:#10262A;color:#fff;border-radius:20px 20px 4px 20px;padding:14px 18px;font-size:15px;line-height:1.5">
+        Quiero un viaje a Cartagena 5 días en diciembre para dos personas
+      </div>
+      <div style="text-align:right;margin-top:4px;font-size:12px;color:#3F575B">Tú · 10:24 a.m.</div>
+    </div>
+
+    <!-- Respuesta del sistema -->
+    <div style="align-self:flex-start;max-width:85%">
+      <div style="background:#E3F3EE;border-radius:20px 20px 20px 4px;padding:14px 18px;font-size:15px;line-height:1.5">
+        <div style="font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10262A" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+          ¡Cartagena, excelente elección!
+        </div>
+        Ya tengo el destino, la duración y los viajeros. Solo me faltan un par de detalles:
+      </div>
+      <div style="margin-top:4px;font-size:12px;color:#3F575B">Trazo · 10:24 a.m.</div>
+    </div>
+
+    <!-- Pregunta 1: Presupuesto -->
+    <div style="align-self:flex-start;max-width:85%">
+      <div style="background:#F2F5F1;border:1.5px solid #D5DDD6;border-radius:20px 20px 20px 4px;padding:14px 18px">
+        <div style="font-size:15px;font-weight:700;margin-bottom:10px">💰 ¿Qué presupuesto manejas para este viaje?</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <button class="chip" type="button">Económico</button>
+          <button class="chip" type="button" style="background:#9ADBCB;border-color:#9ADBCB;font-weight:700">Medio</button>
+          <button class="chip" type="button">Premium</button>
+          <button class="chip" type="button">Sin límite</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pregunta 2: Intereses -->
+    <div style="align-self:flex-start;max-width:85%">
+      <div style="background:#F2F5F1;border:1.5px solid #D5DDD6;border-radius:20px 20px 20px 4px;padding:14px 18px">
+        <div style="font-size:15px;font-weight:700;margin-bottom:10px">🎯 ¿Qué tipo de experiencias te interesan?</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <button class="chip" type="button">🏖️ Playa</button>
+          <button class="chip" type="button" style="background:#9ADBCB;border-color:#9ADBCB;font-weight:700">🏛️ Cultura</button>
+          <button class="chip" type="button" style="background:#9ADBCB;border-color:#9ADBCB;font-weight:700">🍽️ Gastronomía</button>
+          <button class="chip" type="button">🌿 Naturaleza</button>
+          <button class="chip" type="button">🎉 Vida nocturna</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Input del chat -->
+  <div style="padding:14px 16px;border-top:1px solid #E3EAE4;display:flex;gap:10px;align-items:center;background:#fff">
+    <input type="text" placeholder="Escribe o selecciona una opción…" style="flex:1;min-height:44px;border:1.5px solid #D5DDD6;border-radius:999px;padding:0 18px;font:400 15px 'DM Sans',sans-serif;color:#10262A;background:#F2F5F1">
+    <button class="go" style="min-height:44px;padding:0 20px;font-size:14px">Enviar</button>
+  </div>
+
+</aside>
+
+<!-- ===== PANEL DERECHO — ESTADO VACÍO ===== -->
+<main style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;background:#F2F5F1">
+
+  <!-- Ilustración decorativa -->
+  <div style="position:relative;width:260px;height:260px;margin-bottom:32px">
+    <svg width="260" height="260" viewBox="0 0 260 260" fill="none">
+      <circle cx="130" cy="130" r="120" fill="#CFEAE3" fill-opacity=".5"/>
+      <circle cx="130" cy="130" r="80" fill="#E3F3EE"/>
+      <path d="M60 180C90 100 130 160 170 80S220 120 240 60" stroke="#10262A" stroke-opacity=".2" stroke-width="2.5" stroke-dasharray="2 8" stroke-linecap="round"/>
+      <circle cx="90" cy="140" r="12" fill="#FF6B3D" opacity=".8"/>
+      <circle cx="170" cy="100" r="10" fill="#FFD36B"/>
+      <circle cx="200" cy="150" r="8" fill="#9ADBCB"/>
+      <!-- Avión -->
+      <g transform="translate(145,85) rotate(-30)">
+        <path d="M0 0L20-6 4 0 20 6Z" fill="#10262A"/>
+      </g>
+    </svg>
+  </div>
+
+  <h2 class="t" style="font-size:36px;font-weight:800;line-height:1.1;max-width:440px">
+    Tu plan aparecerá
+    <span style="background:#FF6B3D;border-radius:12px;padding:0 10px;display:inline-block;margin-top:4px">aquí</span>
+  </h2>
+  <p style="margin-top:14px;font-size:16px;color:#3F575B;max-width:380px;line-height:1.5">
+    Responde las preguntas del chat y generaremos un itinerario completo con hoteles, actividades, transporte y presupuesto.
+  </p>
+
+  <!-- Steps preview -->
+  <div style="display:flex;gap:20px;margin-top:32px;flex-wrap:wrap;justify-content:center">
+    <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#3F575B">
+      <span style="width:28px;height:28px;border-radius:50%;background:#E3F3EE;display:grid;place-items:center;font-weight:700;font-size:13px;color:#10262A">1</span>
+      Conversamos
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#3F575B">
+      <span style="width:28px;height:28px;border-radius:50%;background:#E3F3EE;display:grid;place-items:center;font-weight:700;font-size:13px;color:#10262A">2</span>
+      Generamos
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#3F575B">
+      <span style="width:28px;height:28px;border-radius:50%;background:#E3F3EE;display:grid;place-items:center;font-weight:700;font-size:13px;color:#10262A">3</span>
+      Editas y publicas
+    </div>
+  </div>
+
+</main>
+</div>
+</body>
+</html>
