@@ -7,7 +7,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://trazo-api.onrender.com/api/:path*"
+      "destination": "https://trazo-api-guxc.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
