@@ -57,8 +57,14 @@ const RESPONSE_SCHEMA = {
                   enum: ['ACCOMMODATION', 'ACTIVITY', 'TRANSPORT'],
                 },
                 catalogItemId: { type: 'STRING' },
-                startTime: { type: 'STRING' },
-                endTime: { type: 'STRING' },
+                startTime: {
+                  type: 'STRING',
+                  description: 'Hora local en formato HH:mm (24 h), por ejemplo 09:00',
+                },
+                endTime: {
+                  type: 'STRING',
+                  description: 'Hora local en formato HH:mm (24 h), por ejemplo 16:30',
+                },
                 notes: { type: 'STRING' },
               },
               required: ['type', 'catalogItemId'],

@@ -52,7 +52,7 @@ AI_PROVIDER=mock
 # Producción/demo con Gemini:
 AI_PROVIDER=gemini
 GEMINI_API_KEY=tu-api-key-de-google-ai-studio
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3-flash-preview
 AI_TIMEOUT_MS=45000
 ```
 
@@ -60,7 +60,7 @@ AI_TIMEOUT_MS=45000
 |---|---|---|
 | `AI_PROVIDER` | no (default `mock`) | `mock` \| `gemini` |
 | `GEMINI_API_KEY` | solo si `AI_PROVIDER=gemini` | Se valida al arrancar; si falta, el proceso no inicia |
-| `GEMINI_MODEL` | no | Modelo de Google; `gemini-2.5-flash` por defecto |
+| `GEMINI_MODEL` | no | Modelo de Google; `gemini-3-flash-preview` por defecto |
 | `AI_TIMEOUT_MS` | no | Timeout duro de cada llamada (45 s por defecto) |
 
 Cómo obtener la API key:
@@ -73,6 +73,11 @@ Cómo obtener la API key:
 
 > La key **solo** la usa el backend. El frontend nunca habla con Gemini ni con Supabase. Si la key se
 > filtra, se rota en AI Studio y se actualiza el entorno; no se intenta "ocultar" en el cliente.
+
+> **Estado verificado (2026-11-03):** la key configurada responde. `gemini-2.5-flash` ya no está
+> disponible para cuentas nuevas; `gemini-3-flash-preview` se usó para generar un plan real de 3 días
+> con IDs del catálogo. `gemini-3.6-flash` y `gemini-3.8-flash` pueden responder `503` por alta
+> demanda. Si el modelo cambia, actualiza `GEMINI_MODEL` sin tocar el código.
 
 Para volver al modo seguro:
 
@@ -270,6 +275,8 @@ sin el SDK `@google/genai`. La petición envía:
 - `contents` con el user prompt delimitado.
 - `generationConfig`: `responseMimeType: application/json`, `responseSchema` del plan,
   `temperature: 0.4`, `maxOutputTokens: 8192`.
+- El schema describe explícitamente `startTime`/`endTime` como `HH:mm` (24 h) y el system prompt
+  prohíbe texto adicional en esas horas; si el modelo falla, se repara una vez con el error.
 
 Comportamiento:
 
@@ -336,7 +343,7 @@ Checklist para activar Gemini en un entorno real:
 
 - [ ] `AI_PROVIDER=gemini` en `backend/.env` o en el gestor de secretos.
 - [ ] `GEMINI_API_KEY` válida y con cuota.
-- [ ] `GEMINI_MODEL` confirmado con la cuenta (por defecto `gemini-2.5-flash`).
+- [ ] `GEMINI_MODEL` confirmado con la cuenta (`gemini-3-flash-preview` verificado el 2026-11-03).
 - [ ] `AI_TIMEOUT_MS` razonable (45 000 ms).
 - [ ] `AI_PROVIDER=mock` sigue pasando los tests.
 - [ ] `npm run verify` en verde.
