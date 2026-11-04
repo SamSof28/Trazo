@@ -5,8 +5,9 @@ Documento de referencia de la arquitectura implementada. Complementa [`../README
 (configuración de Gemini y grounding) y [`DEPLOYMENT.md`](DEPLOYMENT.md) (Supabase + Vercel). Si algo
 aquí no coincide con el código, se corrige el documento.
 
-> **Estado:** backend de las fases 0–7 implementado. El frontend, la disponibilidad de catálogo
-> (HU 3.3–3.4) y el clima (HU 2.6) siguen pendientes.
+> **Estado:** backend de las fases 0–7 implementado. El frontend tiene login, guards, cliente API y
+> refresh; las pantallas de negocio, la disponibilidad de catálogo (HU 3.3–3.4) y el clima (HU 2.6)
+> siguen pendientes.
 
 ## 1. Principios
 
@@ -110,6 +111,18 @@ requestId → helmet → cors → json(100kb) → rateLimit → auth(JWT) → zo
 - Índices mínimos: `plans(advisor_id, status)`, `plan_items(plan_day_id)`, `hotels(destination_id)`,
   `activities(destination_id)`, `trip_requests(advisor_id, status)`, `refresh_tokens(user_id)`.
 
+### 5.1 Imágenes y Supabase Storage
+
+- El puerto `domain/storage/ports.ts` (`ObjectStorage`) abstrae el almacenamiento; el adaptador
+  `infrastructure/storage/supabase-storage.ts` usa la API REST de Supabase Storage con `fetch`, sin
+  SDK adicional.
+- Bucket público `catalog`. El seed crea el bucket y sube los WebP locales con `x-upsert: true`; si
+  Storage no está configurado, usa `picsum.photos` como fallback de desarrollo.
+- La `service_role` solo se usa en el backend (seed/jobs operativos). El frontend recibe únicamente
+  URLs públicas (`heroImageUrl` / `imageUrl`) a través de la API.
+- No hay endpoint de subida de archivos en esta fase: las imágenes se cargan por seed o se editan como
+  URL en el catálogo. Una galería múltiple requeriría una tabla `catalog_images` (fuera de alcance).
+
 ## 6. Generación con IA
 
 ```mermaid
@@ -202,7 +215,7 @@ Validada con Zod al arrancar; si falta una variable requerida, el proceso no ini
 | `COOKIE_DOMAIN` | no | vacío; solo si SPA y API comparten dominio padre |
 | `AI_PROVIDER` | no | `mock` (default) \| `gemini` |
 | `GEMINI_API_KEY` | si `gemini` | nunca en el repo |
-| `GEMINI_MODEL` | no | `gemini-2.5-flash` |
+| `GEMINI_MODEL` | no | `gemini-3-flash-preview` |
 | `AI_TIMEOUT_MS` | no | `45000` |
 | `LOG_LEVEL` | no | `info` |
 | `RATE_LIMIT_ENABLED` | no | `true`; `false` solo en tests |

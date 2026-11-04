@@ -3,8 +3,10 @@
 Instrucciones para sesiones de OpenCode en **Trazo** (Módulo 1: diseñador inteligente de planes
 turísticos). El repositorio ya tiene el monorepo y el backend completo de las fases 0–7: fundación,
 identidad, catálogo, intake conversacional determinista, generación con IA anclada al catálogo, edición
-y presupuesto, guardado/publicación/dashboard y reportes JSON/CSV + PDF, todo con tests. El frontend
-aún no existe y la base de datos no se ha configurado.
+y presupuesto, guardado/publicación/dashboard y reportes JSON/CSV + PDF, todo con tests. La base de
+datos Supabase ya está creada y sembrada. El frontend ya existe en `frontend/`: login, layout, guards,
+cliente API y banner de cookies están implementados; las pantallas de negocio (landing, workspace,
+dashboard, catálogo y admin) siguen como placeholders.
 
 ## Contexto de producto
 
@@ -43,19 +45,19 @@ Si el código contradice estos docs, gana el código ejecutable: actualiza el do
 
 ## Stack y comandos
 
-Monorepo npm workspaces: `backend/`, `packages/shared/`; `frontend/` se agrega en la rebanada 1.4.
+Monorepo npm workspaces: `backend/`, `packages/shared/` y `frontend/`.
 
 ```bash
 npm install                 # raíz
 npm run dev -w backend      # API en :3000 (tsx watch)
-npm run dev -w frontend     # Vite en :5173 (cuando exista frontend/)
+npm run dev -w frontend     # Vite en :5173
 npm run lint                # ESLint flat, todos los workspaces
 npm run typecheck           # tsc --noEmit
 npm run test                # Vitest
 npm run verify              # lint → typecheck → test → build
 npm run test -w @trazo/backend -- test/auth.http.test.ts  # un archivo
 npm run test -w @trazo/backend -- -t "rotates"           # por nombre
-npm run build               # backend tsc (frontend cuando exista)
+npm run build               # shared + backend + frontend
 npm run db:generate -w backend      # prisma generate
 npm run db:migrate -w backend       # prisma migrate dev (requiere DIRECT_URL)
 npm run db:deploy -w backend        # prisma migrate deploy
@@ -70,22 +72,36 @@ npm run db:seed -w backend
 
 - **Implementado:** scaffold del monorepo, `config/env.ts` con Zod, logger pino con redacción,
   `errorHandler` problem+json, `/health`, `/health/ready`, Prisma schema completo + migraciones
-  `0001_init`, `0002_catalog_search`, `0003_trip_request_adults_nullable` y
-  `0004_plan_saved_margin_image` generadas, seed de admin y catálogo de Colombia, login, refresh
-  rotativo con detección de reuso, logout, `/auth/me`, RBAC, `POST /users` (solo `ADMIN`), catálogo
-  completo (`destinations`, `hotels`, `activities`, `transport`) con lectura autenticada, escritura
-  `ADMIN` y soft delete, intake conversacional (`TripRequest`, parser determinista, preguntas/respuestas,
-  listado y ownership), generación con IA (`mock` + Gemini REST, `ai_jobs`, runner in-process), planes
-  (lectura, edición de metadatos e ítems, alternativas, presupuesto), ciclo de vida (`SAVED`, publicar,
-  archivar, duplicar), dashboard API y reportes JSON/CSV + PDF.
-- **Tests:** 124 de backend + 6 de `packages/shared`, con fakes (sin DB ni red).
+  `0001_init`–`0005_transport_image` **aplicadas en Supabase**, seed de admin y catálogo de Colombia,
+  login, refresh rotativo con detección de reuso, logout, `/auth/me`, RBAC, `POST /users` (solo
+  `ADMIN`), catálogo completo (`destinations`, `hotels`, `activities`, `transport`) con lectura
+  autenticada, escritura `ADMIN`, soft delete e `imageUrl` en las cuatro entidades, intake
+  conversacional (`TripRequest`, parser determinista, preguntas/respuestas, listado y ownership),
+  generación con IA (`mock` + Gemini REST, `ai_jobs`, runner in-process), planes (lectura, edición de
+  metadatos e ítems, alternativas, presupuesto), ciclo de vida (`SAVED`, publicar, archivar, duplicar),
+  dashboard API y reportes JSON/CSV + PDF. Incluye el puerto `ObjectStorage` y el adaptador REST
+  `SupabaseStorage` (bucket público `catalog`) usado por el seed.
+- **Tests:** 130 de backend + 6 de `packages/shared`, con fakes (sin DB ni red). `npm run verify` en
+  verde el 2026-11-04.
+- **Datos sembrados:** 1 admin, 5 destinos, 10 hoteles, 20 actividades y 10 transportes. Las imágenes
+  actuales son URLs de `picsum.photos`; los campos `heroImageUrl`/`imageUrl` ya existen y el seed sube
+  WebP locales a Storage cuando se agregan a `backend/prisma/assets/catalog/`.
+- **IA verificada:** `AI_PROVIDER=gemini` con `gemini-3-flash-preview`; se generó un plan real de 3
+  días con IDs del catálogo. `gemini-2.5-flash` ya no está disponible para cuentas nuevas.
 - **Auditoría:** `npm audit` y `npm audit --omit=dev` en 0 (Vitest 5.1, ESLint 10.14 y overrides de
   `deepmerge-ts`/`minimatch` documentados en [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)).
-- **Pendiente inmediato:** aplicar las migraciones y el seed cuando existan credenciales reales de
-  Supabase; el frontend de las rebanadas 1.4, 2.4, 3.3–3.4, 4.5–4.6, 5.3 y 6.4; el modelo de
-  disponibilidad (2.5), el clima (5.7) y las pruebas de carga (7.3).
+- **Frontend actual:** React 19 + Vite 7 + Tailwind 4 en `frontend/`. Implementados: `LoginPage`,
+  `CookieBanner`, guards `ProtectedRoute`/`AdminRoute`, router, cliente API con access token en memoria
+  y refresh por cookie, y componentes compartidos. Pendientes: landing con super prompt, workspace de
+  intake, timeline del plan, dashboard, catálogo y admin de usuarios (hoy son placeholders de 10–13
+  líneas). El login se probó contra la API local y el refresh funciona tras corregir el orden de la FK
+  en `PrismaRefreshTokenRepository.rotate` (test en `refresh-token.repository.test.ts`).
+- **Pendiente inmediato:** pantallas de negocio del frontend (1.4, 2.4, 3.3–3.4, 4.5–4.6, 5.3, 6.4);
+  imágenes definitivas del catálogo; modelo de disponibilidad (2.5), clima (5.7), pruebas de carga
+  (7.3) y despliegue cuando el compañero lo indique. **No** hacer commit/push sin autorización.
 - **Contrato de conexión:** [`docs/BACKEND.md`](docs/BACKEND.md). **IA:** [`docs/AI.md`](docs/AI.md).
-  **Despliegue:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+  **Despliegue:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). **SQL consolidado:**
+  [`docs/supabase-schema.sql`](docs/supabase-schema.sql).
 
 ## Estructura y regla de dependencia
 
@@ -93,7 +109,7 @@ npm run db:seed -w backend
 backend/src/
   domain/          # entidades, value objects, puertos (interfaces), errores de dominio
   application/     # casos de uso, DTOs, transacciones; sin Express ni Prisma
-  infrastructure/  # adaptadores: Prisma, Gemini, catálogo, hashing, tokens, logger
+  infrastructure/  # adaptadores: Prisma, Gemini, storage (Supabase REST), hashing, tokens, logger
   interfaces/http/ # routers, controllers, middleware, presenters
   config/          # env validado con Zod + composition root (wiring manual)
 frontend/src/
@@ -152,8 +168,11 @@ packages/shared/   # esquemas Zod + tipos de contrato (fuente única)
 ## Gotchas del entorno
 
 - Supabase: runtime usa el pooler (`:6543`, `?pgbouncer=true`); migraciones usan `DIRECT_URL` (`:5432`).
-  Mezclarlos produce errores de prepared statements.
+  Mezclarlos produce errores de prepared statements. La conexión directa `db.<ref>.supabase.co:5432`
+  puede fallar por IPv6; usa el **Session pooler** (`aws-1-<region>.pooler.supabase.com:5432`).
 - Prisma no soporta transacciones interactivas largas sobre el pooler en modo transaction; mantenerlas cortas.
+- Gemini: `gemini-2.5-flash` ya no está disponible para cuentas nuevas. El modelo verificado es
+  `gemini-3-flash-preview`; los modelos 3.6/3.8 pueden devolver `503` por alta demanda.
 - COP no usa decimales en la práctica, pero se almacena en unidades menores igual que el resto.
 - El mapa no debe renderizarse en SSR; Leaflet requiere `window` y se carga solo en cliente.
 - `packages/shared` no puede importar nada de `backend/` ni `frontend/` (evita ciclos).

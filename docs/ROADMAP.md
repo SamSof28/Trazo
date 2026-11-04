@@ -6,9 +6,10 @@ docs. No se hace `git commit` sin autorización del usuario.
 
 **Fase actual: 7 — Reportes y endurecimiento (backend completo).** Fases 4–7 implementadas en
 backend: generación con IA anclada al catálogo, edición y presupuesto, guardado/publicación/dashboard
-API, reportes JSON/CSV y PDF. Quedan pendientes el frontend (1.4, 2.4, 3.3–3.4, 4.5–4.6, 5.3, 6.4),
-la disponibilidad de catálogo 2.5 (HU 3.3–3.4), el clima 5.7, el chat de refinamiento 5.8, las pruebas
-de carga 7.3 y aplicar migraciones/seed cuando se configure Supabase.
+API, reportes JSON/CSV y PDF. El frontend ya tiene login, guards, restauración de sesión y cliente HTTP
+con refresh (1.4); quedan las pantallas de negocio (2.4, 3.3–3.4, 4.5–4.6, 5.3, 6.4), la disponibilidad
+de catálogo 2.5 (HU 3.3–3.4), el clima 5.7, el chat de refinamiento 5.8 y las pruebas de carga 7.3. Las
+migraciones y el seed ya están aplicados en Supabase.
 
 ## DoD común
 
@@ -38,10 +39,11 @@ y el seed se ejecutan cuando el equipo configure `DATABASE_URL`/`DIRECT_URL`.
 | 1.1 | `User` + `PasswordHasher` (argon2id) + `POST /auth/login` + test de credenciales | ✅ |
 | 1.2 | Access JWT + refresh rotativo con familia y detección de reuso + `/auth/refresh`, `/auth/logout` | ✅ |
 | 1.3 | `requireAuth`, `requireRole`, `GET /auth/me`, `POST /users` (ADMIN) | ✅ |
-| 1.4 | Frontend: `/login`, guard de rutas, restauración de sesión, cliente HTTP con refresh silencioso | ⏳ |
+| 1.4 | Frontend: `/login`, guard de rutas, restauración de sesión, cliente HTTP con refresh silencioso | ✅ (login, guards y refresh; pantallas de negocio pendientes) |
 
 **DoD:** no existe registro público; un `ADVISOR` no puede crear usuarios; reuso de refresh revoca la
-familia; tests de 401/403/429. Backend cumplido (22 tests + 6 de shared); falta la rebanada 1.4.
+familia; tests de 401/403/429. Backend cumplido (22 tests + 6 de shared); 1.4 cumplido en su alcance de
+autenticación.
 
 ## Fase 2 — Catálogo
 
@@ -49,13 +51,13 @@ familia; tests de 401/403/429. Backend cumplido (22 tests + 6 de shared); falta 
 |---|---|---|
 | 2.1 | `Destination` CRUD (ADMIN) + `GET /catalog/destinations` con búsqueda trigram | ✅ |
 | 2.2 | `Hotel` + `Activity` + `TransportOption` con precios en unidades menores y `pricing_unit` | ✅ |
-| 2.3 | Seed de Colombia: Cartagena, Eje Cafetero, Medellín, San Andrés, Santa Marta (≥ 8 hoteles, ≥ 20 actividades) | ✅ código; ⏳ ejecutar con credenciales reales |
+| 2.3 | Seed de Colombia: Cartagena, Eje Cafetero, Medellín, San Andrés, Santa Marta (≥ 8 hoteles, ≥ 20 actividades) | ✅ ejecutado en Supabase |
 | 2.4 | Frontend: selector de destino con chips y tarjetas | ⏳ |
 | 2.5 | Disponibilidad de catálogo: modelo de cupos/bloqueos, consulta por fechas y explorador con indicador (HU 3.3–3.4) | ⏳ decisión de producto |
 
 **DoD:** precios y monedas consistentes; índices creados; `GET` paginado y filtrable; sin escritura
 para `ADVISOR`. Backend cumplido (47 tests de catálogo + 6 de shared, migración `0002_catalog_search`
-generada); faltan 2.4, 2.5 y aplicar migraciones/seed cuando el equipo configure Supabase.
+aplicada y seed ejecutado); faltan 2.4 y 2.5.
 
 ## Fase 3 — Intake conversacional (sin IA generativa)
 
@@ -68,7 +70,7 @@ generada); faltan 2.4, 2.5 y aplicar migraciones/seed cuando el equipo configure
 
 **DoD:** un prompt incompleto nunca falla; máx. 2 preguntas por turno; `missingFields` correcto;
 tests de extracción con ≥ 10 prompts reales. Backend cumplido: 3.1–3.2 implementados, migración
-`0003_trip_request_adults_nullable`; la suite completa suma 124 tests de backend. Faltan las
+`0003_trip_request_adults_nullable`; la suite completa suma 130 tests de backend. Faltan las
 rebanadas de frontend 3.3–3.4.
 
 ## Fase 4 — Generación con IA anclada al catálogo

@@ -3,9 +3,11 @@
 Guía para llevar Trazo de local a producción. Cubre la base de datos en Supabase, las migraciones,
 el seed, el hosting del backend y el despliegue del SPA en Vercel.
 
-> **Estado:** el backend está completo y probado con fakes, pero **las migraciones y el seed todavía no
-> se han aplicado** porque no hay credenciales reales. El `frontend/` aún no existe; su sección queda
-> preparada para cuando se implemente la rebanada 1.4.
+> **Estado (2026-11-04):** las 5 migraciones ya están aplicadas en Supabase y el seed está cargado
+> (1 admin, 5 destinos, 10 hoteles, 20 actividades y 10 transportes). El backend está listo para que
+> el frontend consuma la API. Las imágenes del catálogo usan `picsum.photos` como placeholder hasta
+> que se generen/suban los WebP definitivos a Supabase Storage. El `frontend/` ya existe con login,
+> guards, cliente API y refresh; las pantallas de negocio siguen como placeholders.
 
 ---
 
@@ -46,6 +48,18 @@ Además:
 una cola/worker real (o `waitUntil` + límites de duración) y un almacenamiento compartido de rate limits;
 eso es un cambio de arquitectura, no de configuración. Usa un host persistente para la API y Vercel para
 el SPA.
+
+### 1.2 Orden de despliegue
+
+1. **Supabase** (ya está): migraciones aplicadas y seed cargado. Para una base nueva,
+   `npm run db:deploy -w backend` y `npm run db:seed -w backend`.
+2. **Backend** en Render/Railway/Fly: variables de entorno, build con Prisma generate, health check
+   `/health`. Anota la URL pública (`https://<api>.onrender.com`).
+3. **Frontend** en Vercel: build de `@trazo/shared` + `frontend`, output `frontend/dist`, `vercel.json`
+   con el rewrite `/api/:path*` hacia la URL del backend y fallback a `/index.html`.
+4. **Probar el circuito completo** desde la URL de Vercel: login, recarga (refresh), `/health/ready`,
+   generación y descarga de PDF/CSV.
+5. Recién entonces compartir la URL con el equipo. No hace falta correr migraciones en cada deploy.
 
 ---
 
@@ -112,6 +126,7 @@ npm run db:deploy -w backend
 2. `0002_catalog_search`
 3. `0003_trip_request_adults_nullable`
 4. `0004_plan_saved_margin_image` (`SAVED`, margen 0–100 e `image_url` del ítem)
+5. `0005_transport_image` (`image_url` de transporte)
 
 No uses `npm run db:migrate` contra Supabase: `prisma migrate dev` crea una *shadow database* y falla en
 planes gratuitos. `db:migrate` es solo para desarrollo local.
@@ -131,7 +146,32 @@ El seed es idempotente (upserts) y usa `DIRECT_URL`. Requiere `ADMIN_EMAIL` y `A
 
 > Cambia la contraseña del admin después del primer login y no reutilices la de desarrollo.
 
-### 3.4 Verificar
+### 3.4 Imágenes y Supabase Storage
+
+El bucket público es `catalog`. El seed crea el bucket si no existe y sube los WebP locales de
+`backend/prisma/assets/catalog/` con `x-upsert: true`; la base guarda solo la URL pública. Si
+`SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` no están configurados o falta el archivo local, el seed
+usa `picsum.photos` como fallback de desarrollo (es el estado actual).
+
+```dotenv
+SUPABASE_URL=https://<ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service_role>
+SUPABASE_STORAGE_BUCKET=catalog
+```
+
+Rutas de los archivos:
+
+```text
+destinations/<slug>.webp
+hotels/<destino>/<hotel>.webp
+activities/<destino>/<actividad>.webp
+transport/<destino>/<modo>-<proveedor>.webp
+```
+
+La `service_role` **solo** vive en el backend. El frontend nunca habla con Supabase ni recibe esa
+clave; consume `imageUrl` / `heroImageUrl` desde la API.
+
+### 3.5 Verificar
 
 ```bash
 npm exec -w backend -- prisma migrate status
@@ -181,8 +221,8 @@ NODE_ENV=production
 CORS_ORIGINS=https://trazo.vercel.app
 TRUST_PROXY=true
 
-DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true
-DIRECT_URL=postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-1-us-west-2.pooler.supabase.com:6543/postgres?pgbouncer=true
+DIRECT_URL=postgresql://postgres.<ref>:<password>@aws-1-us-west-2.pooler.supabase.com:5432/postgres
 
 JWT_ACCESS_SECRET=<openssl rand -base64 48>
 ACCESS_TOKEN_TTL_SECONDS=900
@@ -191,8 +231,12 @@ COOKIE_DOMAIN=
 
 AI_PROVIDER=gemini
 GEMINI_API_KEY=<api-key-de-google-ai-studio>
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3-flash-preview
 AI_TIMEOUT_MS=45000
+
+SUPABASE_URL=https://<ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service_role>
+SUPABASE_STORAGE_BUCKET=catalog
 
 LOG_LEVEL=info
 RATE_LIMIT_ENABLED=true
@@ -228,8 +272,8 @@ proveedor ofrece *release command*, úsalo de forma controlada y con una sola in
 
 ## 5. SPA en Vercel
 
-> Esta sección aplica cuando exista `frontend/` (rebanada 1.4). Los nombres de scripts pueden ajustarse
-> al `package.json` real.
+> El SPA ya existe en `frontend/` (React 19 + Vite 7 + Tailwind 4). Esta sección refleja los scripts
+> reales del workspace.
 
 ### 5.1 Proyecto
 
@@ -238,13 +282,16 @@ proveedor ofrece *release command*, úsalo de forma controlada y con una sola in
 | Framework Preset | Vite |
 | Root Directory | raíz del repo (para reutilizar el lockfile del workspace) |
 | Install Command | `npm ci` |
-| Build Command | `npm run build -w frontend` |
+| Build Command | `npm run build -w @trazo/shared && npm run build -w frontend` |
 | Output Directory | `frontend/dist` |
 | Node Version | 22.x |
 
+El build de `@trazo/shared` es obligatorio: el frontend importa los tipos y el `loginSchema` desde
+`packages/shared/dist`, no desde el código fuente.
+
 ### 5.2 Rewrite hacia la API
 
-El SPA debe llamar a `/api/v1/*` en el mismo origen. En el `vercel.json` del proyecto:
+El SPA debe llamar a `/api/v1/*` en el mismo origen. En el `vercel.json` de la raíz del repo:
 
 ```json
 {
@@ -252,10 +299,17 @@ El SPA debe llamar a `/api/v1/*` en el mismo origen. En el `vercel.json` del pro
     {
       "source": "/api/:path*",
       "destination": "https://trazo-api.onrender.com/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
 ```
+
+La segunda regla es el fallback del SPA: permite entrar directo a `/login`, `/plans/:id` o
+`/workspace/:id` sin que Vercel devuelva 404. El orden importa: primero la API, después el fallback.
 
 Con esto:
 
@@ -265,11 +319,9 @@ Con esto:
 - El header `Authorization` pasa sin cambios.
 - Los PDF y CSV se descargan igual; no necesitan exponer el backend.
 
-Configura en el frontend:
-
-```dotenv
-VITE_API_URL=/api/v1
-```
+**No definas `VITE_API_URL` en Vercel si usas el rewrite.** El cliente usa rutas relativas en el build
+de producción (`/api/v1/...`) y `http://localhost:3000` solo en `vite dev`. Si algún día llamas directo
+a la API, define `VITE_API_URL=https://trazo-api.onrender.com` (sin `/api/v1`, el cliente lo agrega).
 
 Si en lugar de rewrite llamas directo a la API en otro dominio, el refresh **no funcionará** con
 `SameSite=Strict`: el navegador no envía la cookie en peticiones cross-site. No cambies la cookie a
@@ -297,7 +349,9 @@ Checklist:
 
 - [ ] `AI_PROVIDER=gemini`.
 - [ ] `GEMINI_API_KEY` válida y con cuota; rotarla si se filtra.
-- [ ] `GEMINI_MODEL` confirmado con la cuenta (`gemini-2.5-flash` por defecto).
+- [ ] `GEMINI_MODEL` confirmado con la cuenta (`gemini-3-flash-preview` verificado el 2026-11-03;
+      `gemini-2.5-flash` ya no está disponible para cuentas nuevas).
+- [ ] `SUPABASE_SERVICE_ROLE_KEY` solo en el backend; bucket `catalog` público para lectura.
 - [ ] `AI_TIMEOUT_MS=45000` o el valor acordado; el host debe permitir respuestas de esa duración.
 - [ ] `AI_PROVIDER=mock` sigue pasando `npm run verify` (red de seguridad para tests/demo).
 - [ ] Probar un plan de 3 días y verificar que todos los `catalogItemId` existen y que el total sale de

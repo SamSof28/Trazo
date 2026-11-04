@@ -9,12 +9,12 @@ La experiencia se inspira en [layla.ai](https://layla.ai/es): sin formularios de
 
 > **Estado:** los backends de las fases 0–7 ya están implementados (monorepo, configuración validada,
 > identidad, RBAC, catálogo, intake conversacional determinista, generación con IA anclada al catálogo,
-> edición de planes, publicación, reportes y PDF) con **124 tests de backend + 6 de shared**. El
-> frontend, la disponibilidad de catálogo (HU 3.3–3.4) y el clima (HU 2.6) siguen pendientes; las
-> migraciones y el seed aún no se aplican porque Supabase no está configurado. Este README y
-> `AGENTS.md` son la fuente de verdad del producto y del dominio; `docs/` contiene arquitectura,
-> contrato de API, modelo de datos, mapa del backend, IA, despliegue y hoja de ruta. Léelos antes de
-> escribir código.
+> edición de planes, publicación, reportes y PDF) con **130 tests de backend + 6 de shared**. La base
+> Supabase está migrada y sembrada. El frontend ya tiene login, guards, cliente API y refresh; las
+> pantallas de negocio, la disponibilidad de catálogo (HU 3.3–3.4) y el clima (HU 2.6) siguen
+> pendientes. Este README y `AGENTS.md` son la fuente de verdad del producto y del dominio; `docs/`
+> contiene arquitectura, contrato de API, modelo de datos, mapa del backend, IA, despliegue y hoja de
+> ruta. Léelos antes de escribir código.
 
 ---
 

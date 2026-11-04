@@ -3,8 +3,10 @@
 > **Estado:** Fase 0 y los backends de Fase 1 (identidad), Fase 2 (catálogo), Fase 3 (intake
 > conversacional), Fase 4 (generación con IA anclada al catálogo), Fase 5 (edición y presupuesto),
 > Fase 6 (guardado, publicación y dashboard API) y Fase 7 (reportes JSON/CSV y PDF) están completos.
-> El frontend, la disponibilidad de catálogo (HU 3.3–3.4) y el clima (HU 2.6) siguen pendientes. Este
-> documento describe lo que **ya está implementado** y el patrón exacto para agregar lo que sigue.
+> La base Supabase está migrada y sembrada (2026-11-03). El frontend ya existe: login, guards, cliente
+> API y refresh están implementados; las pantallas de negocio, la disponibilidad de catálogo
+> (HU 3.3–3.4) y el clima (HU 2.6) siguen pendientes. Este documento describe lo que **ya está
+> implementado** y el patrón exacto para agregar lo que sigue.
 
 Documentos relacionados: [`API.md`](API.md) (contrato REST), [`ARCHITECTURE.md`](ARCHITECTURE.md)
 (capas y seguridad), [`DOMAIN.md`](DOMAIN.md) (modelo de datos), [`AI.md`](AI.md) (Gemini y grounding)
@@ -85,9 +87,9 @@ curl -i http://localhost:3000/health/ready
    ```
 
    `db:deploy` ejecuta `prisma migrate deploy` contra `DIRECT_URL` y aplica, en orden,
-   `0001_init`, `0002_catalog_search`, `0003_trip_request_adults_nullable` y
-   `0004_plan_saved_margin_image`. No uses `db:migrate` contra Supabase: crea una *shadow database* y
-   falla en planes gratuitos.
+   `0001_init`, `0002_catalog_search`, `0003_trip_request_adults_nullable`,
+   `0004_plan_saved_margin_image` y `0005_transport_image`. No uses `db:migrate` contra Supabase:
+   crea una *shadow database* y falla en planes gratuitos.
 6. **Sembrar admin y catálogo.**
 
    ```bash
@@ -95,7 +97,9 @@ curl -i http://localhost:3000/health/ready
    ```
 
    El seed es idempotente: crea/actualiza el `ADMIN` con `ADMIN_EMAIL`/`ADMIN_PASSWORD` y carga los
-   destinos, hoteles, actividades y transporte de Colombia. Se conecta con `DIRECT_URL`.
+   destinos, hoteles, actividades y transporte de Colombia. Se conecta con `DIRECT_URL`. Si hay WebP
+   en `backend/prisma/assets/catalog/` y `SUPABASE_*` está configurado, los sube al bucket `catalog`;
+   si no, usa `picsum.photos` como placeholder.
 7. **Verificar.**
 
    ```bash
@@ -145,8 +149,11 @@ no inicia y muestra el campo exacto.
 | `COOKIE_DOMAIN` | no | vacío | Dominio compartido entre SPA y API |
 | `AI_PROVIDER` | no | `mock` | `mock` \| `gemini` |
 | `GEMINI_API_KEY` | si `gemini` | — | Nunca en el repo |
-| `GEMINI_MODEL` | no | `gemini-2.5-flash` | Modelo de Google |
+| `GEMINI_MODEL` | no | `gemini-3-flash-preview` | Modelo de Google |
 | `AI_TIMEOUT_MS` | no | `45000` | Timeout del proveedor |
+| `SUPABASE_URL` | no | — | URL del proyecto para Storage |
+| `SUPABASE_SERVICE_ROLE_KEY` | si Storage | — | Solo backend; nunca en el SPA |
+| `SUPABASE_STORAGE_BUCKET` | no | `catalog` | Bucket público de imágenes |
 | `LOG_LEVEL` | no | `info` | `fatal`…`silent` |
 | `RATE_LIMIT_ENABLED` | no | `true` | Desactivar solo en tests |
 | `ADMIN_NAME` | no | `Administrador` | Seed |
@@ -165,6 +172,8 @@ backend/
     migrations/0002_catalog_search/ # pg_trgm + índices GIN del catálogo
     migrations/0003_trip_request_adults_nullable/ # adults nullable + CHECK de intake
     migrations/0004_plan_saved_margin_image/ # SAVED, margen 0–100 e image_url del ítem
+    migrations/0005_transport_image/ # image_url de transporte
+    assets/catalog/               # WebP locales opcionales para el seed
     seed.ts                       # admin + catálogo de Colombia idempotente
   src/
     domain/
@@ -960,17 +969,19 @@ npm run typecheck
 npm run build
 ```
 
-Estado actual: **124 tests de backend + 6 de `packages/shared`**, sin base de datos ni red (fakes).
+Estado actual: **130 tests de backend + 6 de `packages/shared`**, sin base de datos ni red (fakes).
 Los tests HTTP usan Supertest contra la app real con repositorios en memoria. El catálogo añade
 `catalog.domain.test.ts` (invariantes) y `catalog.http.test.ts` (lecturas, filtros, RBAC y CRUD). El
 intake añade `intake.domain.test.ts` (agregado y transiciones), `prompt-parser.test.ts` (extracción
 determinista con ≥ 10 prompts reales) e `intake.http.test.ts` (create/get/list/answers, ownership y
 validación). La planificación añade `planning.domain.test.ts` (presupuesto, edición y ciclo de vida),
 `ai-output.test.ts` (Zod + grounding), `gemini-planner.test.ts` (contrato REST), `planning.http.test.ts`
-(generación, ítems, publicación, reportes y PDF) y `plan-pdf.test.ts`.
+(generación, ítems, publicación, reportes y PDF), `plan-pdf.test.ts`, `supabase-storage.test.ts`
+(contrato REST de Storage) y `refresh-token.repository.test.ts` (orden de la FK en la rotación).
 
-Los tests de integración contra Postgres siguen pendientes de credenciales reales. El patrón será
-limpiar por transacción o truncado, nunca compartir estado entre tests.
+La suite de integración contra Postgres sigue pendiente; hoy todos los tests usan fakes y no tocan la
+base ni la red. Cuando se agregue, el patrón será limpiar por transacción o truncado, nunca compartir
+estado entre tests.
 
 ---
 
@@ -979,8 +990,8 @@ limpiar por transacción o truncado, nunca compartir estado entre tests.
 | Elemento | Estado |
 |---|---|
 | Scaffold, env, logger, errores, health | ✅ |
-| Prisma schema + migraciones `0001_init`, `0002_catalog_search`, `0003_trip_request_adults_nullable` y `0004_plan_saved_margin_image` | ✅ (generadas, **no aplicadas** sin credenciales) |
-| Seed de admin + catálogo de Colombia | ✅ (código listo, **no ejecutado** sin credenciales) |
+| Prisma schema + migraciones `0001_init`–`0005_transport_image` | ✅ (aplicadas en Supabase) |
+| Seed de admin + catálogo de Colombia | ✅ (ejecutado: 1 admin, 5 destinos, 10 hoteles, 20 actividades, 10 transportes) |
 | Login, refresh rotativo, logout, `/auth/me` | ✅ |
 | RBAC `ADMIN` + `POST /users` | ✅ |
 | Catálogo backend: destinos, hoteles, actividades y transporte | ✅ (lectura + CRUD `ADMIN`, soft delete) |
@@ -989,7 +1000,7 @@ limpiar por transacción o truncado, nunca compartir estado entre tests.
 | Planes: lectura, edición de metadatos/ítems, alternativas y presupuesto | ✅ (Fase 5) |
 | Ciclo de vida: `SAVED`, publicar, archivar, duplicar y dashboard API | ✅ (Fase 6) |
 | Reportes JSON/CSV y PDF | ✅ (Fase 7.1 y 7.5) |
-| Frontend `/login`, guard, refresh silencioso | ⏳ Fase 1.4 |
+| Frontend `/login`, guards y refresh silencioso | ✅ (pantallas de negocio pendientes) |
 | Frontend del catálogo (selector de destino) | ⏳ Fase 2.4 |
 | Disponibilidad de catálogo (modelo + explorador) | ⏳ Fase 2.5 |
 | Frontend del intake (landing + chat) | ⏳ Fases 3.3–3.4 |
