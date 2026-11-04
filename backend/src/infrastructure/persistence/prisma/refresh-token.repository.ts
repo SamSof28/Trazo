@@ -46,9 +46,11 @@ export class PrismaRefreshTokenRepository implements RefreshTokenRepository {
     revokedAt: Date;
   }): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
+      // Revoke the current token first, without the self-reference: the FK to
+      // the replacement can only be set after that row exists.
       const updated = await tx.refreshToken.updateMany({
         where: { id: input.currentId, revokedAt: null },
-        data: { revokedAt: input.revokedAt, replacedById: input.nextId },
+        data: { revokedAt: input.revokedAt },
       });
 
       if (updated.count === 0) return false;
@@ -61,6 +63,11 @@ export class PrismaRefreshTokenRepository implements RefreshTokenRepository {
           familyId: input.familyId,
           expiresAt: input.expiresAt,
         },
+      });
+
+      await tx.refreshToken.update({
+        where: { id: input.currentId },
+        data: { replacedById: input.nextId },
       });
 
       return true;
