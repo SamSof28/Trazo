@@ -321,9 +321,23 @@ Detalle del prompt, grounding y reparación: [`AI.md`](AI.md).
 - [ ] `.env` fuera de git; secretos en el gestor del host.
 - [ ] Contraseña del admin cambiada; sin usuarios de prueba activos.
 - [ ] Backups/PITR de Supabase activos según el plan contratado.
-- [ ] `npm audit` sin vulnerabilidades high/critical.
+- [ ] `npm audit` y `npm audit --omit=dev` sin vulnerabilidades high/critical (hoy: 0 en ambos).
 - [ ] Logs sin PII ni prompts completos.
 - [ ] `npm run verify` en verde en el commit desplegado.
+
+### 7.1 Overrides de seguridad
+
+El `package.json` raíz fija dos overrides para dependencias transitivas que todavía no publican una
+versión corregida dentro de la rama que usa el proyecto:
+
+| Override | Advisory | Motivo |
+|---|---|---|
+| `@prisma/config > deepmerge-ts@8.0.2` | GHSA-ggr8-5vv4-36mx | Prisma 6.19.3 fija `deepmerge-ts@7.1.5`; se fuerza la versión corregida sin migrar a Prisma 7 |
+| `minimatch@^11.0.1` | GHSA-g3hv-75wg-m249 | ESLint 10 y TypeScript-ESLint usan `minimatch` 10.x; se fuerza la rama corregida |
+
+Se verificó con `prisma validate`, `prisma generate`, `npm run verify`, `npm audit` y
+`npm audit --omit=dev`. Revisar estos overrides al actualizar Prisma, ESLint o TypeScript-ESLint: si
+sus dependencias ya aceptan las versiones corregidas, se pueden retirar.
 
 ---
 

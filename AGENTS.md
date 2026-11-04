@@ -79,6 +79,8 @@ npm run db:seed -w backend
   (lectura, edición de metadatos e ítems, alternativas, presupuesto), ciclo de vida (`SAVED`, publicar,
   archivar, duplicar), dashboard API y reportes JSON/CSV + PDF.
 - **Tests:** 124 de backend + 6 de `packages/shared`, con fakes (sin DB ni red).
+- **Auditoría:** `npm audit` y `npm audit --omit=dev` en 0 (Vitest 5.1, ESLint 10.14 y overrides de
+  `deepmerge-ts`/`minimatch` documentados en [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)).
 - **Pendiente inmediato:** aplicar las migraciones y el seed cuando existan credenciales reales de
   Supabase; el frontend de las rebanadas 1.4, 2.4, 3.3–3.4, 4.5–4.6, 5.3 y 6.4; el modelo de
   disponibilidad (2.5), el clima (5.7) y las pruebas de carga (7.3).

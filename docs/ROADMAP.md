@@ -122,7 +122,7 @@ un asesor no ve planes ajenos; `SAVED` se puede editar y `PUBLISHED` sigue inmut
 | Rebanada | Entrega | Estado |
 |---|---|---|
 | 7.1 | `GET /plans/:id/report` (JSON/CSV) con desglose por categoría y día | ✅ |
-| 7.2 | Rate limits definitivos, auditoría de dependencias, revisión de logs sin PII | 🟡 rate limits y logs listos; auditoría pendiente |
+| 7.2 | Rate limits definitivos, auditoría de dependencias, revisión de logs sin PII | ✅ rate limits, logs y auditoría sin vulnerabilidades |
 | 7.3 | Pruebas de carga básicas en `/generate` y `/plans` | ⏳ |
 | 7.4 | Documento de despliegue (Supabase + hosting del backend y del SPA) | ✅ [`DEPLOYMENT.md`](DEPLOYMENT.md) |
 | 7.5 | Exportación PDF del plan (HU 2.8): portada, itinerario, ítems y totales | ✅ |
