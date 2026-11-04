@@ -205,13 +205,13 @@ Ejemplo con Render:
 | Branch | `main` |
 | Runtime | Node 22 |
 | Root Directory | raíz del repo (donde está `package.json`) |
-| Build Command | `npm ci && npm run db:generate -w backend && npm run build` |
+| Build Command | `npm ci --include=dev && npm run db:generate -w backend && npm run build -w @trazo/shared && npm run build -w backend` |
 | Start Command | `npm run start -w backend` |
 | Health Check Path | `/health` |
 | Auto-Deploy | solo si el equipo lo autoriza |
 
-`npm run build` compila `packages/shared` y luego el backend a `backend/dist`. El start ejecuta
-`node dist/server.js`.
+Los dos builds compilan `packages/shared` y el backend a `backend/dist`; no hace falta compilar el frontend
+en Render. El start ejecuta `node dist/server.js`.
 
 ### 4.2 Variables de entorno del backend
 
@@ -281,7 +281,7 @@ proveedor ofrece *release command*, úsalo de forma controlada y con una sola in
 |---|---|
 | Framework Preset | Vite |
 | Root Directory | raíz del repo (para reutilizar el lockfile del workspace) |
-| Install Command | `npm ci` |
+| Install Command | `npm ci --include=dev` |
 | Build Command | `npm run build -w @trazo/shared && npm run build -w frontend` |
 | Output Directory | `frontend/dist` |
 | Node Version | 22.x |
