@@ -20,6 +20,64 @@
   --radius-pill: 999px;
   --radius-modal: 36px;
   --radius-card: 24px;
+
+  --animate-rise: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-rise-delayed: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+  --animate-pop: pop 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-toast-in: toast-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade: fade 0.2s ease both;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-rise-delayed,
+  .animate-pop,
+  .animate-toast-in,
+  .animate-fade {
+    animation: none;
+  }
 }
 
 @layer base {

@@ -44,7 +44,7 @@ export const Modal: React.FC<ModalProps> = ({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-forest/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="animate-fade fixed inset-0 z-50 flex items-center justify-center bg-forest/60 p-4 backdrop-blur-xs"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
@@ -55,7 +55,7 @@ export const Modal: React.FC<ModalProps> = ({
         className={`
           w-full ${maxWidthClasses[maxWidth]} bg-sand rounded-modal p-8 md:p-10
           shadow-[0_40px_80px_-30px_rgba(0,0,0,0.4)] relative overflow-hidden
-          animate-in zoom-in-95 duration-200
+          animate-pop
         `}
       >
         <div className="flex items-center justify-between mb-6">

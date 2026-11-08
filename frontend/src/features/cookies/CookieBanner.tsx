@@ -35,7 +35,7 @@ export const CookieBanner: React.FC = () => {
         <aside
           role="region"
           aria-label="Aviso de cookies"
-          className="fixed left-4 bottom-4 sm:left-8 sm:bottom-8 z-40 w-[calc(100%-2rem)] sm:w-[420px] box-border bg-forest text-white rounded-[28px] p-6 shadow-[0_24px_50px_-20px_rgba(0,0,0,0.7)] animate-in fade-in slide-in-from-bottom-4 duration-300 font-sans"
+          className="animate-toast-in fixed bottom-4 left-4 z-40 box-border w-[calc(100%-2rem)] rounded-[28px] bg-forest p-6 font-sans text-white shadow-[0_24px_50px_-20px_rgba(0,0,0,0.7)] sm:bottom-8 sm:left-8 sm:w-[420px]"
         >
           <div className="font-heading font-extrabold text-xl sm:text-[22px] tracking-tight">
             Cookies, sin letra pequeña 🍪

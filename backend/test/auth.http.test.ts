@@ -124,4 +124,31 @@ describe('HTTP auth', () => {
     expect(created.body.user.email).toBe('nuevo@trazo.co');
     expect(created.body.user).not.toHaveProperty('passwordHash');
   });
+
+  it('lists users for ADMIN and hides password hashes', async () => {
+    const { app } = buildTestApp();
+    const advisor = await loginAs(app, 'asesor@trazo.co');
+    const admin = await loginAs(app, 'admin@trazo.co');
+
+    const forbidden = await request(app)
+      .get('/api/v1/users')
+      .set('Authorization', `Bearer ${advisor.accessToken}`);
+    expect(forbidden.status).toBe(403);
+    expect(forbidden.body.code).toBe('FORBIDDEN');
+
+    const response = await request(app)
+      .get('/api/v1/users')
+      .set('Authorization', `Bearer ${admin.accessToken}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.users).toHaveLength(3);
+    expect(response.body.users.map((user: { email: string }) => user.email)).toEqual([
+      'asesor@trazo.co',
+      'otro@trazo.co',
+      'admin@trazo.co',
+    ]);
+    for (const user of response.body.users) {
+      expect(user).not.toHaveProperty('passwordHash');
+    }
+  });
 });

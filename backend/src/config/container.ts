@@ -6,6 +6,7 @@ import { LoginUseCase } from '../application/identity/login.use-case.js';
 import { RefreshUseCase } from '../application/identity/refresh.use-case.js';
 import { LogoutUseCase } from '../application/identity/logout.use-case.js';
 import { CreateUserUseCase } from '../application/identity/create-user.use-case.js';
+import { ListUsersUseCase } from '../application/identity/list-users.use-case.js';
 import { GetMeUseCase } from '../application/identity/get-me.use-case.js';
 import { ListDestinationsUseCase } from '../application/catalog/list-destinations.use-case.js';
 import { GetDestinationUseCase } from '../application/catalog/get-destination.use-case.js';
@@ -125,6 +126,7 @@ export function buildContainer(): Container {
   );
   const logoutUseCase = new LogoutUseCase(refreshTokens, tokens, clock);
   const createUserUseCase = new CreateUserUseCase(users, hasher, clock);
+  const listUsersUseCase = new ListUsersUseCase(users);
   const getMeUseCase = new GetMeUseCase(users);
 
   const destinationController = new DestinationController(
@@ -205,7 +207,7 @@ export function buildContainer(): Container {
     prisma,
     accessTokens,
     authController: new AuthController(loginUseCase, refreshUseCase, logoutUseCase, getMeUseCase),
-    userController: new UserController(createUserUseCase),
+    userController: new UserController(createUserUseCase, listUsersUseCase),
     destinationController,
     hotelController,
     activityController,

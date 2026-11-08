@@ -3,11 +3,12 @@
 Guía para llevar Trazo de local a producción. Cubre la base de datos en Supabase, las migraciones,
 el seed, el hosting del backend y el despliegue del SPA en Vercel.
 
-> **Estado (2026-11-04):** las 5 migraciones ya están aplicadas en Supabase y el seed está cargado
-> (1 admin, 5 destinos, 10 hoteles, 20 actividades y 10 transportes). El backend está listo para que
+> **Estado (2026-11-08):** las 5 migraciones ya están aplicadas en Supabase y el seed está cargado
+> (1 admin, 7 destinos, 14 hoteles, 28 actividades y 15 transportes). El backend está listo para que
 > el frontend consuma la API. Las imágenes del catálogo usan `picsum.photos` como placeholder hasta
-> que se generen/suban los WebP definitivos a Supabase Storage. El `frontend/` ya existe con login,
-> guards, cliente API y refresh; las pantallas de negocio siguen como placeholders.
+> que se generen/suban los WebP definitivos a Supabase Storage. El `frontend/` implementa login,
+> guards, cliente API con refresh, landing, catálogo, intake, workspace del plan, dashboard y
+> administración del equipo.
 
 ---
 

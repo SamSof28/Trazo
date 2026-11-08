@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router-dom';
 import { router } from './app/router';
 import { CookieBanner } from './features/cookies/CookieBanner';
+import { Toaster } from './shared/components/Toast';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,6 +26,7 @@ export const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
       <CookieBanner />
+      <Toaster />
     </QueryClientProvider>
   );
 };

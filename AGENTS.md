@@ -4,9 +4,9 @@ Instrucciones para sesiones de OpenCode en **Trazo** (Módulo 1: diseñador inte
 turísticos). El repositorio ya tiene el monorepo y el backend completo de las fases 0–7: fundación,
 identidad, catálogo, intake conversacional determinista, generación con IA anclada al catálogo, edición
 y presupuesto, guardado/publicación/dashboard y reportes JSON/CSV + PDF, todo con tests. La base de
-datos Supabase ya está creada y sembrada. El frontend ya existe en `frontend/`: login, layout, guards,
-cliente API y banner de cookies están implementados; las pantallas de negocio (landing, workspace,
-dashboard, catálogo y admin) siguen como placeholders.
+datos Supabase ya está creada y sembrada con 7 destinos. El frontend ya existe en `frontend/` con
+login, layout, guards, cliente API, banner de cookies, landing, catálogo y ficha de destino, intake
+conversacional, workspace del plan, dashboard y administración del equipo.
 
 ## Contexto de producto
 
@@ -73,7 +73,7 @@ npm run db:seed -w backend
 - **Implementado:** scaffold del monorepo, `config/env.ts` con Zod, logger pino con redacción,
   `errorHandler` problem+json, `/health`, `/health/ready`, Prisma schema completo + migraciones
   `0001_init`–`0005_transport_image` **aplicadas en Supabase**, seed de admin y catálogo de Colombia,
-  login, refresh rotativo con detección de reuso, logout, `/auth/me`, RBAC, `POST /users` (solo
+  login, refresh rotativo con detección de reuso, logout, `/auth/me`, RBAC, `GET/POST /users` (solo
   `ADMIN`), catálogo completo (`destinations`, `hotels`, `activities`, `transport`) con lectura
   autenticada, escritura `ADMIN`, soft delete e `imageUrl` en las cuatro entidades, intake
   conversacional (`TripRequest`, parser determinista, preguntas/respuestas, listado y ownership),
@@ -81,9 +81,9 @@ npm run db:seed -w backend
   metadatos e ítems, alternativas, presupuesto), ciclo de vida (`SAVED`, publicar, archivar, duplicar),
   dashboard API y reportes JSON/CSV + PDF. Incluye el puerto `ObjectStorage` y el adaptador REST
   `SupabaseStorage` (bucket público `catalog`) usado por el seed.
-- **Tests:** 130 de backend + 6 de `packages/shared`, con fakes (sin DB ni red). `npm run verify` en
-  verde el 2026-11-04.
-- **Datos sembrados:** 1 admin, 5 destinos, 10 hoteles, 20 actividades y 10 transportes. Las imágenes
+- **Tests:** 131 de backend + 6 de `packages/shared`, con fakes (sin DB ni red). `npm run verify` en
+  verde el 2026-11-08.
+- **Datos sembrados:** 1 admin, 7 destinos, 14 hoteles, 28 actividades y 15 transportes. Las imágenes
   actuales son URLs de `picsum.photos`; los campos `heroImageUrl`/`imageUrl` ya existen y el seed sube
   WebP locales a Storage cuando se agregan a `backend/prisma/assets/catalog/`.
 - **IA verificada:** `AI_PROVIDER=gemini` con `gemini-3-flash-preview`; se generó un plan real de 3
@@ -91,14 +91,15 @@ npm run db:seed -w backend
 - **Auditoría:** `npm audit` y `npm audit --omit=dev` en 0 (Vitest 5.1, ESLint 10.14 y overrides de
   `deepmerge-ts`/`minimatch` documentados en [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)).
 - **Frontend actual:** React 19 + Vite 7 + Tailwind 4 en `frontend/`. Implementados: `LoginPage`,
-  `CookieBanner`, guards `ProtectedRoute`/`AdminRoute`, router, cliente API con access token en memoria
-  y refresh por cookie, y componentes compartidos. Pendientes: landing con super prompt, workspace de
-  intake, timeline del plan, dashboard, catálogo y admin de usuarios (hoy son placeholders de 10–13
-  líneas). El login se probó contra la API local y el refresh funciona tras corregir el orden de la FK
-  en `PrismaRefreshTokenRepository.rotate` (test en `refresh-token.repository.test.ts`).
-- **Pendiente inmediato:** pantallas de negocio del frontend (1.4, 2.4, 3.3–3.4, 4.5–4.6, 5.3, 6.4);
-  imágenes definitivas del catálogo; modelo de disponibilidad (2.5), clima (5.7), pruebas de carga
-  (7.3) y despliegue cuando el compañero lo indique. **No** hacer commit/push sin autorización.
+  `CookieBanner`, guards `ProtectedRoute`/`AdminRoute`, router con `AppShell`, cliente API con access
+  token en memoria y refresh por cookie, landing con dos caminos (IA/catálogo), catálogo y ficha de
+  destino, intake conversacional, workspace del plan con edición y presupuesto, dashboard y
+  administración del equipo. El login se probó contra la API local y el refresh funciona tras
+  corregir el orden de la FK en `PrismaRefreshTokenRepository.rotate` (test en
+  `refresh-token.repository.test.ts`).
+- **Pendiente inmediato:** imágenes definitivas del catálogo; modelo de disponibilidad (2.5), clima
+  (5.7), chat de refinamiento (5.8), mapa Leaflet embebido y pruebas de carga (7.3); despliegue cuando
+  el compañero lo indique. **No** hacer commit/push sin autorización.
 - **Contrato de conexión:** [`docs/BACKEND.md`](docs/BACKEND.md). **IA:** [`docs/AI.md`](docs/AI.md).
   **Despliegue:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). **SQL consolidado:**
   [`docs/supabase-schema.sql`](docs/supabase-schema.sql).

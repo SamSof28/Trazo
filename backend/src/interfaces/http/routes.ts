@@ -70,6 +70,7 @@ export function createApiRouter(deps: ApiRouterDependencies): Router {
   router.post('/auth/logout', deps.authController.logout);
   router.get('/auth/me', auth, deps.authController.me);
 
+  router.get('/users', auth, admin, deps.userController.list);
   router.post('/users', auth, admin, validateBody(createUserSchema), deps.userController.create);
 
   router.get(

@@ -357,6 +357,7 @@ Router montado en `/api/v1` (`backend/src/interfaces/http/routes.ts`).
 | `POST` | `/auth/refresh` | cookie `refresh_token` (30/min/IP) | `AuthController.refresh` | `RefreshUseCase` | ✅ |
 | `POST` | `/auth/logout` | cookie `refresh_token` | `AuthController.logout` | `LogoutUseCase` | ✅ |
 | `GET` | `/auth/me` | `Bearer` | `AuthController.me` | `GetMeUseCase` | ✅ |
+| `GET` | `/users` | `Bearer` + `ADMIN` | `UserController.list` | `ListUsersUseCase` | ✅ |
 | `POST` | `/users` | `Bearer` + `ADMIN` | `UserController.create` | `CreateUserUseCase` | ✅ |
 | `GET` | `/catalog/destinations` | `Bearer` | `DestinationController.list` | `ListDestinationsUseCase` | ✅ |
 | `GET` | `/catalog/destinations/:id` | `Bearer` | `DestinationController.get` | `GetDestinationUseCase` | ✅ |
@@ -484,7 +485,18 @@ Authorization: Bearer <accessToken>
 - Si el token expiró o es inválido: `401 UNAUTHENTICATED`.
 - Si el usuario fue desactivado: `401` (la sesión deja de ser válida).
 
-### 4.5 `POST /api/v1/users` (solo `ADMIN`)
+### 4.5 `GET/POST /api/v1/users` (solo `ADMIN`)
+
+```http
+GET /api/v1/users
+Authorization: Bearer <accessTokenAdmin>
+```
+
+```http
+200 OK
+{ "users": [ { "id": "...", "name": "...", "email": "...", "role": "ADVISOR",
+               "isActive": true, "createdAt": "...", "lastLoginAt": null } ] }
+```
 
 ```http
 POST /api/v1/users
@@ -505,9 +517,10 @@ Content-Type: application/json
             "role": "ADVISOR", "isActive": true, "createdAt": "...", "lastLoginAt": null } }
 ```
 
-- No hay registro público: solo un `ADMIN` crea usuarios.
+- No hay registro público: solo un `ADMIN` lista o crea usuarios.
 - `role` por defecto es `ADVISOR`; `password` mínimo 12 caracteres.
 - Email duplicado: `409 CONFLICT`.
+- El listado ordena por fecha de alta y nunca devuelve `passwordHash`.
 
 ### 4.6 Catálogo (lectura y administración)
 
@@ -893,6 +906,7 @@ Todos los errores usan `application/problem+json`:
 | Recurso | `ADVISOR` | `ADMIN` |
 |---|---|---|
 | `GET /auth/me` | propio | propio |
+| `GET /users` | ❌ `403` | ✅ |
 | `POST /users` | ❌ `403` | ✅ |
 | Catálogo (lectura) | ✅ | ✅ |
 | Catálogo (escritura) | ❌ `403` | ✅ |
@@ -991,17 +1005,18 @@ estado entre tests.
 |---|---|
 | Scaffold, env, logger, errores, health | ✅ |
 | Prisma schema + migraciones `0001_init`–`0005_transport_image` | ✅ (aplicadas en Supabase) |
-| Seed de admin + catálogo de Colombia | ✅ (ejecutado: 1 admin, 5 destinos, 10 hoteles, 20 actividades, 10 transportes) |
+| Seed de admin + catálogo de Colombia | ✅ (ejecutado: 1 admin, 7 destinos, 14 hoteles, 28 actividades, 15 transportes) |
 | Login, refresh rotativo, logout, `/auth/me` | ✅ |
-| RBAC `ADMIN` + `POST /users` | ✅ |
+| RBAC `ADMIN` + `GET/POST /users` | ✅ |
 | Catálogo backend: destinos, hoteles, actividades y transporte | ✅ (lectura + CRUD `ADMIN`, soft delete) |
 | Intake backend: `TripRequest`, parser determinista, preguntas y respuestas | ✅ (Fase 3.1–3.2) |
 | Generación con IA (`mock` + Gemini REST), `ai_jobs` y runner in-process | ✅ (Fase 4) |
 | Planes: lectura, edición de metadatos/ítems, alternativas y presupuesto | ✅ (Fase 5) |
 | Ciclo de vida: `SAVED`, publicar, archivar, duplicar y dashboard API | ✅ (Fase 6) |
 | Reportes JSON/CSV y PDF | ✅ (Fase 7.1 y 7.5) |
-| Frontend `/login`, guards y refresh silencioso | ✅ (pantallas de negocio pendientes) |
-| Frontend del catálogo (selector de destino) | ⏳ Fase 2.4 |
+| Frontend `/login`, guards y refresh silencioso | ✅ |
+| Frontend del catálogo (búsqueda, filtros y ficha de destino) | ✅ Fase 2.4 |
+| Frontend de intake, plan, dashboard y equipo | ✅ Fases 3.3–3.4, 4.5–4.6, 5.3 y 6.4 |
 | Disponibilidad de catálogo (modelo + explorador) | ⏳ Fase 2.5 |
 | Frontend del intake (landing + chat) | ⏳ Fases 3.3–3.4 |
 | Frontend del workspace (mapa, carrusel, timeline, progreso) | ⏳ Fases 4.5–4.6 y 5.3 |

@@ -23,3 +23,7 @@ export interface MeResponse {
 export interface CreateUserResponse {
   user: PublicUser;
 }
+
+export interface ListUsersResponse {
+  users: PublicUser[];
+}

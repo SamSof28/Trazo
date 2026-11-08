@@ -10,6 +10,8 @@ export default tseslint.config(
       '**/coverage/**',
       'backend/prisma/migrations/**',
       'backend/prisma/generated/**',
+      '.claude/**',
+      '.opencode/**',
     ],
   },
   js.configs.recommended,

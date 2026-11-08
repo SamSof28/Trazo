@@ -5,6 +5,7 @@ import { LoginUseCase } from '../src/application/identity/login.use-case.js';
 import { RefreshUseCase } from '../src/application/identity/refresh.use-case.js';
 import { LogoutUseCase } from '../src/application/identity/logout.use-case.js';
 import { CreateUserUseCase } from '../src/application/identity/create-user.use-case.js';
+import { ListUsersUseCase } from '../src/application/identity/list-users.use-case.js';
 import { GetMeUseCase } from '../src/application/identity/get-me.use-case.js';
 import { ListDestinationsUseCase } from '../src/application/catalog/list-destinations.use-case.js';
 import { GetDestinationUseCase } from '../src/application/catalog/get-destination.use-case.js';
@@ -217,7 +218,10 @@ export function buildTestApp(): {
     new LogoutUseCase(refreshTokens, tokens, clock),
     new GetMeUseCase(users),
   );
-  const userController = new UserController(new CreateUserUseCase(users, hasher, clock));
+  const userController = new UserController(
+    new CreateUserUseCase(users, hasher, clock),
+    new ListUsersUseCase(users),
+  );
   const destinationController = new DestinationController(
     new ListDestinationsUseCase(destinations),
     new GetDestinationUseCase(destinations),

@@ -116,7 +116,7 @@ export const LoginPage: React.FC = () => {
       <div
         role="dialog"
         aria-labelledby="login-title"
-        className="relative w-full max-w-[520px] box-border bg-sand rounded-modal p-8 sm:p-10 shadow-[0_40px_80px_-30px_rgba(0,0,0,0.65)] animate-in zoom-in-95 duration-200"
+        className="animate-pop relative box-border w-full max-w-[520px] rounded-modal bg-sand p-8 shadow-[0_40px_80px_-30px_rgba(0,0,0,0.65)] sm:p-10"
       >
         {/* Logo superior */}
         <div className="flex items-center justify-between">

@@ -46,6 +46,10 @@ export class InMemoryUserRepository implements UserRepository {
     return this.users.get(id) ?? null;
   }
 
+  async list(): Promise<User[]> {
+    return [...this.users.values()];
+  }
+
   async create(input: CreateUserInput): Promise<User> {
     const user = User.fromPersistence({
       ...input,

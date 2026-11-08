@@ -12,3 +12,5 @@ coverage/
 backend/prisma/*.db
 playwright-report/
 test-results/
+.claude/
+.opencode/

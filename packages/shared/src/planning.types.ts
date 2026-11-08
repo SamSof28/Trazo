@@ -105,6 +105,9 @@ export interface PlanReportDayDto {
     type: PlanItemType;
     name: string;
     quantity: number;
+    startTime: string | null;
+    endTime: string | null;
+    notes: string | null;
     subtotal: Money;
   }>;
 }
@@ -114,6 +117,9 @@ export interface PlanReportDto {
   title: string | null;
   status: PlanStatus;
   destination: string;
+  summary: string | null;
+  tags: string[];
+  heroImageUrl: string | null;
   days: PlanReportDayDto[];
   budget: PlanBudgetDto;
   generatedAt: string;

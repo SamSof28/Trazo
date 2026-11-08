@@ -4,12 +4,13 @@ Entrega **incremental por rebanadas verticales**. Una fase no empieza hasta que 
 definición de terminado (DoD). Cada rebanada incluye dominio + caso de uso + adaptador + ruta + tests +
 docs. No se hace `git commit` sin autorización del usuario.
 
-**Fase actual: 7 — Reportes y endurecimiento (backend completo).** Fases 4–7 implementadas en
-backend: generación con IA anclada al catálogo, edición y presupuesto, guardado/publicación/dashboard
-API, reportes JSON/CSV y PDF. El frontend ya tiene login, guards, restauración de sesión y cliente HTTP
-con refresh (1.4); quedan las pantallas de negocio (2.4, 3.3–3.4, 4.5–4.6, 5.3, 6.4), la disponibilidad
-de catálogo 2.5 (HU 3.3–3.4), el clima 5.7, el chat de refinamiento 5.8 y las pruebas de carga 7.3. Las
-migraciones y el seed ya están aplicados en Supabase.
+**Fase actual: 7 — Reportes y endurecimiento (backend completo, frontend de negocio completo).**
+Fases 4–7 implementadas en backend: generación con IA anclada al catálogo, edición y presupuesto,
+guardado/publicación/dashboard API, reportes JSON/CSV y PDF. El frontend implementa login, guards,
+cliente HTTP con refresh, landing, catálogo y ficha de destino, intake conversacional, workspace del
+plan, dashboard y administración del equipo. Quedan la disponibilidad de catálogo 2.5 (HU 3.3–3.4),
+el clima 5.7, el chat de refinamiento 5.8, el mapa Leaflet embebido y las pruebas de carga 7.3. Las
+migraciones y el seed (7 destinos) ya están aplicados en Supabase.
 
 ## DoD común
 
@@ -38,8 +39,8 @@ y el seed se ejecutan cuando el equipo configure `DATABASE_URL`/`DIRECT_URL`.
 |---|---|---|
 | 1.1 | `User` + `PasswordHasher` (argon2id) + `POST /auth/login` + test de credenciales | ✅ |
 | 1.2 | Access JWT + refresh rotativo con familia y detección de reuso + `/auth/refresh`, `/auth/logout` | ✅ |
-| 1.3 | `requireAuth`, `requireRole`, `GET /auth/me`, `POST /users` (ADMIN) | ✅ |
-| 1.4 | Frontend: `/login`, guard de rutas, restauración de sesión, cliente HTTP con refresh silencioso | ✅ (login, guards y refresh; pantallas de negocio pendientes) |
+| 1.3 | `requireAuth`, `requireRole`, `GET /auth/me`, `GET/POST /users` (ADMIN) | ✅ |
+| 1.4 | Frontend: `/login`, guard de rutas, restauración de sesión, cliente HTTP con refresh silencioso | ✅ |
 
 **DoD:** no existe registro público; un `ADVISOR` no puede crear usuarios; reuso de refresh revoca la
 familia; tests de 401/403/429. Backend cumplido (22 tests + 6 de shared); 1.4 cumplido en su alcance de
@@ -51,8 +52,8 @@ autenticación.
 |---|---|---|
 | 2.1 | `Destination` CRUD (ADMIN) + `GET /catalog/destinations` con búsqueda trigram | ✅ |
 | 2.2 | `Hotel` + `Activity` + `TransportOption` con precios en unidades menores y `pricing_unit` | ✅ |
-| 2.3 | Seed de Colombia: Cartagena, Eje Cafetero, Medellín, San Andrés, Santa Marta (≥ 8 hoteles, ≥ 20 actividades) | ✅ ejecutado en Supabase |
-| 2.4 | Frontend: selector de destino con chips y tarjetas | ⏳ |
+| 2.3 | Seed de Colombia: Cartagena, Eje Cafetero, Medellín, San Andrés, Santa Marta, Bogotá y Guatapé (≥ 8 hoteles, ≥ 20 actividades) | ✅ ejecutado en Supabase (7 destinos, 14 hoteles, 28 actividades, 15 transportes) |
+| 2.4 | Frontend: catálogo con búsqueda, filtros, destacado y ficha de destino | ✅ |
 | 2.5 | Disponibilidad de catálogo: modelo de cupos/bloqueos, consulta por fechas y explorador con indicador (HU 3.3–3.4) | ⏳ decisión de producto |
 
 **DoD:** precios y monedas consistentes; índices creados; `GET` paginado y filtrable; sin escritura
@@ -65,8 +66,8 @@ aplicada y seed ejecutado); faltan 2.4 y 2.5.
 |---|---|---|
 | 3.1 | `TripRequest` + `POST /trip-requests` + extracción determinista de slots (fechas, personas, días, banda de presupuesto) | ✅ |
 | 3.2 | Motor de preguntas con catálogo de chips + `POST /answers` + transición a `READY` | ✅ |
-| 3.3 | Frontend: landing con super prompt y chips + transición a workspace split-view | ⏳ |
-| 3.4 | Chat con `aria-live`, estado "pensando", historial de mensajes en Zustand | ⏳ |
+| 3.3 | Frontend: landing con presentación de la agencia, super prompt y dos caminos (IA/catálogo) + transición a workspace | ✅ |
+| 3.4 | Chat con `aria-live`, estado "pensando", preguntas con chips y panel de contexto | ✅ |
 
 **DoD:** un prompt incompleto nunca falla; máx. 2 preguntas por turno; `missingFields` correcto;
 tests de extracción con ≥ 10 prompts reales. Backend cumplido: 3.1–3.2 implementados, migración
@@ -81,8 +82,8 @@ rebanadas de frontend 3.3–3.4.
 | 4.2 | Adaptador Gemini con JSON schema, timeout, 1 reparación, métricas de tokens/latencia | ✅ |
 | 4.3 | `GeneratePlanUseCase`: shortlist → IA → validación de IDs → recálculo → `Plan DRAFT` | ✅ |
 | 4.4 | `ai_jobs` + worker in-process + `POST /generate` (202) + polling | ✅ |
-| 4.5 | Frontend: mapa Leaflet con pines de precio + carrusel "Destinos para ti" + timeline por días | ⏳ |
-| 4.6 | Progreso por etapas en UI (HU 1.4): interpretando → consultando catálogo → armando itinerario → calculando presupuesto | ⏳ |
+| 4.5 | Frontend: timeline por días + panel de contexto con enlaces a OpenStreetMap (mapa Leaflet embebido pendiente) | ✅ parcial |
+| 4.6 | Progreso por etapas en UI (HU 1.4): interpretando → consultando catálogo → armando itinerario → calculando presupuesto | ✅ |
 | 4.7 | Validación de disponibilidad del shortlist antes de generar (HU 3.4); un ítem no disponible se descarta o sustituye | ⏳ depende de 2.5 |
 
 **DoD:** ningún precio proviene del modelo; IDs inválidos se descartan sin romper el plan; timeout
@@ -95,7 +96,7 @@ demo; ninguna generación incluye ítems no disponibles.
 |---|---|---|
 | 5.1 | `GET /plans/:id/alternatives` (mismo tipo/destino/moneda, 3 opciones) | ✅ |
 | 5.2 | `PATCH /plans/:id/items/:itemId` + recálculo transaccional + snapshot | ✅ |
-| 5.3 | Frontend: modal de alternativas, actualización optimista con rollback, tarjeta sticky de costos | ⏳ |
+| 5.3 | Frontend: modal de alternativas, edición de ítems y tarjeta sticky de costos | ✅ |
 | 5.4 | Subtotal por día en el timeline y en el resumen (HU 2.4) | ✅ API (`PlanDayDto.subtotal`) |
 | 5.5 | Edición manual de ítems: agregar, quitar, reordenar y ajustar horarios/cantidades (HU 2.5) | ✅ |
 | 5.6 | Margen 0–100 % + migración del CHECK `plans.margin_percent` (HU 2.9) | ✅ migración `0004` |
@@ -113,7 +114,7 @@ solo informativo y su fallo no bloquea el plan.
 | 6.1 | `PATCH /plans/:id` (título, resumen, tags) + validaciones | ✅ |
 | 6.2 | `POST /publish`, `/archive`, `/duplicate` + reglas INV-07/08 | ✅ |
 | 6.3 | `GET /plans` con filtros (`status`, `q`, `destinationId`) y paginación | ✅ |
-| 6.4 | Frontend: dashboard con filtros, reapertura de plan, confirmación de publicación | ⏳ |
+| 6.4 | Frontend: dashboard con filtros, reapertura de plan, confirmación de publicación y administración del equipo | ✅ |
 | 6.5 | Estado `SAVED` editable: migración del enum y reglas de reapertura (HU 2.7) | ✅ |
 
 **DoD:** publicar sin título o sin ítems devuelve `422`; duplicar crea `DRAFT` con `version + 1`;

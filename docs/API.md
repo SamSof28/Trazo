@@ -5,8 +5,10 @@ Este documento es el contrato que consumen el frontend y los tests; cambia junto
 
 > **Estado:** las secciones 2 (auth e identidad), 3 (catálogo), 4 (solicitud de viaje y generación),
 > 5 (planes, edición, ciclo de vida, reportes y PDF) y 6 (mapa y sugerencias) están implementadas en
-> backend. El frontend y la disponibilidad de catálogo (HU 3.3–3.4) siguen pendientes. El mapa real de
-> controllers y el ejemplo de cliente HTTP están en [`BACKEND.md`](BACKEND.md).
+> backend. El frontend consume estos contratos en landing, catálogo, intake, plan, dashboard y equipo.
+> Siguen pendientes la disponibilidad de catálogo (HU 3.3–3.4), el clima (HU 2.6) y el mapa Leaflet
+> embebido. El mapa real de controllers y el ejemplo de cliente HTTP están en
+> [`BACKEND.md`](BACKEND.md).
 
 ## 1. Convenciones
 
@@ -28,6 +30,7 @@ Este documento es el contrato que consumen el frontend y los tests; cambia junto
 | POST | `/auth/refresh` | cookie `refresh_token`, 30/min/IP | Rota refresh y devuelve nuevo access | ✅ |
 | POST | `/auth/logout` | cookie `refresh_token` | Revoca refresh actual; idempotente | ✅ |
 | GET | `/auth/me` | Bearer | Usuario y rol actuales | ✅ |
+| GET | `/users` | Bearer + `ADMIN` | Lista el equipo (`PublicUser[]`) | ✅ |
 | POST | `/users` | Bearer + `ADMIN` | Crea asesor (`ADVISOR`) | ✅ |
 | PATCH | `/users/:id` | Bearer + `ADMIN` | Activa/desactiva o cambia rol | ⏳ pendiente |
 
@@ -114,7 +117,20 @@ Authorization: Bearer <accessToken>
 
 `401` si el token falta, expiró, es inválido o el usuario fue desactivado.
 
-### 2.5 Crear usuario (ADMIN)
+### 2.5 Listar y crear usuarios (ADMIN)
+
+```http
+GET /api/v1/users
+Authorization: Bearer <accessTokenAdmin>
+```
+
+```http
+200 OK
+{ "users": [ { ...PublicUser }, ... ] }
+```
+
+- `ADVISOR` → `403 FORBIDDEN`.
+- Orden ascendente por fecha de alta. No incluye `passwordHash`.
 
 ```http
 POST /api/v1/users
@@ -648,6 +664,9 @@ GET /api/v1/plans/7a2b.../pdf
   "title": "Cartagena Esencial 5 días",
   "status": "DRAFT",
   "destination": "Cartagena, Colombia",
+  "summary": "Cinco días entre el centro histórico, las islas y la gastronomía local.",
+  "tags": ["playa", "cultura"],
+  "heroImageUrl": "https://.../cartagena.webp",
   "days": [
     {
       "dayNumber": 1,
@@ -655,6 +674,7 @@ GET /api/v1/plans/7a2b.../pdf
       "subtotal": { "amountMinor": 218000000, "currency": "COP" },
       "items": [
         { "type": "TRANSPORT", "name": "Avianca (FLIGHT)", "quantity": 2,
+          "startTime": "08:00", "endTime": "09:30", "notes": "Salida desde MDE",
           "subtotal": { "amountMinor": 90000000, "currency": "COP" } }
       ]
     }
@@ -670,8 +690,9 @@ GET /api/v1/plans/7a2b.../pdf
   `Content-Disposition: attachment; filename="plan-<id>.csv"` y columnas
   `dia,fecha,tipo,item,cantidad,subtotal_minor,moneda`, seguidas de `subtotal`, `margen_pct`,
   `margen` y `total`.
-- `GET /plans/:id/pdf` responde `application/pdf` con portada, resumen de presupuesto e itinerario.
-  El PDF se genera en el servidor sin dependencias externas.
+- `GET /plans/:id/pdf` responde `application/pdf` con portada de marca (logo vectorial, gradiente,
+  ruta punteada y líneas topográficas), resumen de presupuesto, tarjetas por día e itinerario con
+  horarios y notas. El PDF se genera en el servidor sin dependencias externas.
 - Todos los montos salen del plan persistido; el cliente no calcula nada.
 
 ## 6. Mapa y sugerencias (implementado)
@@ -682,11 +703,15 @@ Cada destino incluye `fromPrice` (derivado del hotel activo más económico en C
 de sugerencias muestran `fromPrice` y los del plan abierto muestran `budget.total`. Sin plan, no se
 inventa un precio: si `fromPrice` es `null`, el pin solo muestra el nombre.
 
+El frontend actual resuelve la geografía con un panel de contexto y enlaces a OpenStreetMap
+(`latitude`/`longitude` del destino). El mapa Leaflet embebido queda como mejora posterior.
+
 ## 7. RBAC
 
 | Recurso | `ADVISOR` | `ADMIN` | Estado |
 |---|---|---|---|
 | `GET /auth/me` | propio | propio | ✅ |
+| `GET /users` | ❌ (`403`) | ✅ | ✅ |
 | `POST /users` | ❌ (`403`) | ✅ | ✅ |
 | Catálogo (lectura) | ✅ | ✅ | ✅ |
 | Catálogo (escritura) | ❌ (`403`) | ✅ | ✅ |
