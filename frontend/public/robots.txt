@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://trazo.vercel.app/sitemap.xml
