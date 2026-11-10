@@ -42,6 +42,84 @@ describe('HTTP auth', () => {
     expect(cookie).toContain('SameSite=Strict');
   });
 
+  it('registers a public advisor, persists the profile and starts a session', async () => {
+    const { app } = buildTestApp();
+
+    const response = await request(app).post('/api/v1/auth/register').send({
+      name: 'María Gómez',
+      agency: 'Viajes del Valle',
+      email: '  MARIA@AGENCIA.CO ',
+      password: 'password-larga-123',
+      acceptTerms: true,
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body.accessToken).toBeTypeOf('string');
+    expect(response.body.expiresIn).toBe(900);
+    expect(response.body.user).toMatchObject({
+      name: 'María Gómez',
+      email: 'maria@agencia.co',
+      agency: 'Viajes del Valle',
+      role: 'ADVISOR',
+      isActive: true,
+    });
+    expect(response.body.user).not.toHaveProperty('passwordHash');
+
+    const cookies = response.headers['set-cookie'];
+    const cookie = Array.isArray(cookies) ? cookies[0] : cookies;
+    expect(cookie).toContain('refresh_token=');
+    expect(cookie).toContain('HttpOnly');
+    expect(cookie).toContain('SameSite=Strict');
+
+    const me = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${response.body.accessToken}`);
+    expect(me.status).toBe(200);
+    expect(me.body.user.email).toBe('maria@agencia.co');
+
+    const admin = await loginAs(app, 'admin@trazo.co');
+    const users = await request(app)
+      .get('/api/v1/users')
+      .set('Authorization', `Bearer ${admin.accessToken}`);
+    expect(users.status).toBe(200);
+    expect(
+      users.body.users.find((user: { email: string }) => user.email === 'maria@agencia.co'),
+    ).toMatchObject({ agency: 'Viajes del Valle', role: 'ADVISOR' });
+  });
+
+  it('rejects a duplicate registration email with 409', async () => {
+    const { app } = buildTestApp();
+    const payload = {
+      name: 'María Gómez',
+      email: 'maria@agencia.co',
+      password: 'password-larga-123',
+      acceptTerms: true,
+    };
+
+    const first = await request(app).post('/api/v1/auth/register').send(payload);
+    expect(first.status).toBe(201);
+
+    const duplicate = await request(app).post('/api/v1/auth/register').send(payload);
+    expect(duplicate.status).toBe(409);
+    expect(duplicate.body.code).toBe('CONFLICT');
+  });
+
+  it('rejects invalid registration payloads and role escalation', async () => {
+    const { app } = buildTestApp();
+    const response = await request(app).post('/api/v1/auth/register').send({
+      name: 'A',
+      email: 'not-an-email',
+      password: 'short',
+      acceptTerms: false,
+      role: 'ADMIN',
+    });
+
+    expect(response.status).toBe(422);
+    expect(response.type).toBe('application/problem+json');
+    expect(response.body.code).toBe('VALIDATION_ERROR');
+    expect(response.body.errors.length).toBeGreaterThanOrEqual(3);
+  });
+
   it('returns 422 with field errors for an invalid payload', async () => {
     const { app } = buildTestApp();
     const response = await request(app)

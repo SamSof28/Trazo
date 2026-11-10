@@ -1,6 +1,12 @@
 import type { Request, Response } from 'express';
-import type { AuthSessionResponse, LoginInput, MeResponse } from '@trazo/shared';
+import type {
+  AuthSessionResponse,
+  LoginInput,
+  MeResponse,
+  RegisterInput,
+} from '@trazo/shared';
 import type { LoginUseCase } from '../../application/identity/login.use-case.js';
+import type { RegisterUseCase } from '../../application/identity/register.use-case.js';
 import type { RefreshUseCase } from '../../application/identity/refresh.use-case.js';
 import type { LogoutUseCase } from '../../application/identity/logout.use-case.js';
 import type { GetMeUseCase } from '../../application/identity/get-me.use-case.js';
@@ -9,10 +15,25 @@ import { clearRefreshCookie, readRefreshCookie, setRefreshCookie } from './cooki
 export class AuthController {
   constructor(
     private readonly loginUseCase: LoginUseCase,
+    private readonly registerUseCase: RegisterUseCase,
     private readonly refreshUseCase: RefreshUseCase,
     private readonly logoutUseCase: LogoutUseCase,
     private readonly getMeUseCase: GetMeUseCase,
   ) {}
+
+  register = async (req: Request, res: Response): Promise<void> => {
+    const body = req.body as RegisterInput;
+    const result = await this.registerUseCase.execute(body);
+
+    setRefreshCookie(res, result.refreshToken, result.refreshExpiresAt);
+
+    const response: AuthSessionResponse = {
+      accessToken: result.accessToken,
+      expiresIn: result.expiresIn,
+      user: result.user,
+    };
+    res.status(201).json(response);
+  };
 
   login = async (req: Request, res: Response): Promise<void> => {
     const body = req.body as LoginInput;

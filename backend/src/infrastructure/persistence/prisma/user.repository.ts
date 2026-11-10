@@ -9,6 +9,7 @@ type UserRow = {
   id: string;
   name: string;
   email: string;
+  agency: string | null;
   passwordHash: string;
   role: Role;
   isActive: boolean;
@@ -22,6 +23,7 @@ function toDomain(row: UserRow): User {
     id: row.id,
     name: row.name,
     email: row.email,
+    agency: row.agency,
     passwordHash: row.passwordHash,
     role: row.role,
     active: row.isActive,
@@ -56,6 +58,7 @@ export class PrismaUserRepository implements UserRepository {
           id: input.id,
           name: input.name,
           email: input.email,
+          agency: input.agency ?? null,
           passwordHash: input.passwordHash,
           role: input.role,
         },

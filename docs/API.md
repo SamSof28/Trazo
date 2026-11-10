@@ -26,6 +26,7 @@ Este documento es el contrato que consumen el frontend y los tests; cambia junto
 
 | Método | Ruta | Auth | Descripción | Estado |
 |---|---|---|---|---|
+| POST | `/auth/register` | público, 5/min/IP | Crea una cuenta `ADVISOR` y abre sesión | ✅ |
 | POST | `/auth/login` | público, 5/min/IP | Email + password → access token + cookie refresh | ✅ |
 | POST | `/auth/refresh` | cookie `refresh_token`, 30/min/IP | Rota refresh y devuelve nuevo access | ✅ |
 | POST | `/auth/logout` | cookie `refresh_token` | Revoca refresh actual; idempotente | ✅ |
@@ -41,6 +42,7 @@ Este documento es el contrato que consumen el frontend y los tests; cambia junto
   "id": "uuid",
   "name": "Asesor Demo",
   "email": "asesor@agencia.co",
+  "agency": "Viajes del Valle",
   "role": "ADVISOR",
   "isActive": true,
   "createdAt": "2026-11-02T15:00:00.000Z",
@@ -48,7 +50,36 @@ Este documento es el contrato que consumen el frontend y los tests; cambia junto
 }
 ```
 
-### 2.1 Login
+### 2.1 Registro público
+
+```http
+POST /api/v1/auth/register
+Content-Type: application/json
+
+{
+  "name": "María Gómez",
+  "agency": "Viajes del Valle",
+  "email": "maria@agencia.co",
+  "password": "password-larga-123",
+  "acceptTerms": true
+}
+```
+
+```http
+201 Created
+Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Expires=...
+
+{ "accessToken": "...", "expiresIn": 900, "user": { ...PublicUser } }
+```
+
+- Crea siempre un usuario `ADVISOR`; el rol no se acepta desde el cliente (enviarlo da `422`).
+- `agency` es opcional (máx. 120 caracteres); se normaliza el email (trim + minúsculas).
+- `password` mínimo 12 caracteres y `acceptTerms` debe ser `true`.
+- Email duplicado → `409 CONFLICT`.
+- Abre sesión de inmediato: devuelve access token y fija la cookie de refresh.
+- `429 RATE_LIMITED` a partir de 5 registros/min/IP.
+
+### 2.2 Login
 
 ```http
 POST /api/v1/auth/login
@@ -70,7 +101,7 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/a
 - `429 RATE_LIMITED` a partir de 5 intentos/min/IP.
 - El refresh token **no** viaja en el body.
 
-### 2.2 Refresh
+### 2.3 Refresh
 
 ```http
 POST /api/v1/auth/refresh
@@ -89,7 +120,7 @@ Set-Cookie: refresh_token=<nuevo>; HttpOnly; Secure; SameSite=Strict; Path=/api/
 - Token ausente, expirado o desconocido → `401 UNAUTHENTICATED`.
 - No requiere `Authorization`; la cookie es la credencial.
 
-### 2.3 Logout
+### 2.4 Logout
 
 ```http
 POST /api/v1/auth/logout
@@ -103,7 +134,7 @@ Set-Cookie: refresh_token=; ...; Expires=Thu, 01 Jan 1970 00:00:00 GMT
 
 Idempotente: sin cookie o con token ya revocado también responde `204`.
 
-### 2.4 Me
+### 2.5 Me
 
 ```http
 GET /api/v1/auth/me
@@ -117,7 +148,7 @@ Authorization: Bearer <accessToken>
 
 `401` si el token falta, expiró, es inválido o el usuario fue desactivado.
 
-### 2.5 Listar y crear usuarios (ADMIN)
+### 2.6 Listar y crear usuarios (ADMIN)
 
 ```http
 GET /api/v1/users
@@ -152,9 +183,10 @@ Content-Type: application/json
 
 - `password` mínimo 12 caracteres; `role` por defecto `ADVISOR`.
 - `ADVISOR` → `403 FORBIDDEN`; email duplicado → `409 CONFLICT`.
-- No hay registro público: solo un `ADMIN` crea usuarios.
+- El registro público (`POST /auth/register`) crea asesores; un `ADMIN` sigue siendo el único que
+  puede crear usuarios con rol `ADMIN` o gestionar el equipo.
 
-### 2.6 Cookie de refresh
+### 2.7 Cookie de refresh
 
 | Atributo | Valor |
 |---|---|
@@ -711,6 +743,7 @@ El frontend actual resuelve la geografía con un panel de contexto y enlaces a O
 
 | Recurso | `ADVISOR` | `ADMIN` | Estado |
 |---|---|---|---|
+| `POST /auth/register` | público (crea `ADVISOR`) | público (crea `ADVISOR`) | ✅ |
 | `GET /auth/me` | propio | propio | ✅ |
 | `GET /users` | ❌ (`403`) | ✅ | ✅ |
 | `POST /users` | ❌ (`403`) | ✅ | ✅ |
@@ -729,6 +762,7 @@ del body.
 
 | Endpoint | Límite | Estado |
 |---|---|---|
+| `POST /auth/register` | 5/min/IP | ✅ |
 | `POST /auth/login` | 5/min/IP | ✅ |
 | `POST /auth/refresh` | 30/min/IP | ✅ |
 | Global | 300/min/IP | ✅ |

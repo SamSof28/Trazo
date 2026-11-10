@@ -11,11 +11,17 @@ const base = {
 };
 
 describe('User', () => {
-  it('normalizes name and email', () => {
-    const user = User.create(base);
+  it('normalizes name, email and agency', () => {
+    const user = User.create({ ...base, agency: '  Viajes del Valle  ' });
     expect(user.name).toBe('Asesor Demo');
     expect(user.email).toBe('asesor@trazo.co');
+    expect(user.agency).toBe('Viajes del Valle');
     expect(user.active).toBe(true);
+  });
+
+  it('stores an empty agency as null', () => {
+    const user = User.create({ ...base, agency: '   ' });
+    expect(user.agency).toBeNull();
   });
 
   it('rejects invalid emails', () => {
@@ -32,6 +38,7 @@ describe('User', () => {
       id: 'user-1',
       name: 'Asesor Demo',
       email: 'asesor@trazo.co',
+      agency: null,
       role: 'ADVISOR',
       isActive: true,
       createdAt: '2026-11-02T15:00:00.000Z',

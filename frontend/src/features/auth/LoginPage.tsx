@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { loginSchema } from '@trazo/shared';
 import { useAuthStore } from './store';
 import { ApiError } from '../../shared/api/client';
@@ -299,8 +299,17 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-muted">
-          Plataforma de asesores turísticos · Acceso administrado
+        <p className="mt-6 text-center text-sm text-muted">
+          ¿Aún no tienes cuenta?{' '}
+          <Link
+            to="/register"
+            className="font-bold text-forest underline decoration-orange decoration-2 underline-offset-4 hover:text-orange-dark focus-visible:outline-3 focus-visible:outline-orange focus-visible:outline-offset-2"
+          >
+            Crea tu perfil de asesor
+          </Link>
+        </p>
+        <p className="mt-2 text-center text-xs text-muted">
+          Plataforma de asesores turísticos
         </p>
       </div>
     </div>

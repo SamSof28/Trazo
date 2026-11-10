@@ -35,6 +35,12 @@ export const loginLimiter = rateLimit({
   limit: 5,
 });
 
+export const registerLimiter = rateLimit({
+  ...common,
+  windowMs: 60_000,
+  limit: 5,
+});
+
 export const refreshLimiter = rateLimit({
   ...common,
   windowMs: 60_000,

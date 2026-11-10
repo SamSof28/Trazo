@@ -171,7 +171,8 @@ Reglas:
   cookie `HttpOnly; SameSite=Strict; Path=/api/v1/auth` (`Secure` en producción), guardado como hash
   SHA-256 con `familyId` para detectar reuso.
 - Reuso de refresh ⇒ revocar familia y forzar login.
-- `POST /auth/logout` revoca el refresh actual. Sin registro público: `ADMIN` crea asesores.
+- `POST /auth/register` permite registro público y crea siempre un `ADVISOR`; `ADMIN` sigue creando
+  usuarios internos y gestionando roles. `POST /auth/logout` revoca el refresh actual.
 
 ### Autorización
 
@@ -182,7 +183,7 @@ Reglas:
 ### Superficie de ataque
 
 - CORS con allowlist exacta, `credentials: true` solo para el origen del SPA.
-- Rate limit: `auth` 5/min/IP, `generate` 10/h/usuario, global 300/min/IP.
+- Rate limit: `auth` (registro y login) 5/min/IP, `generate` 10/h/usuario, global 300/min/IP.
 - Validación Zod con `.strict()`; rechazar campos desconocidos en payloads sensibles.
 - Sanitizar texto mostrado (React escapa por defecto; no usar `dangerouslySetInnerHTML`).
 - Prompt injection: instrucciones del sistema separadas, entrada delimitada, salida solo por schema,
@@ -192,8 +193,8 @@ Reglas:
 
 ## 8. Frontend
 
-- Rutas: `/` (landing), `/workspace/:tripRequestId` (split-view), `/plans` (dashboard), `/plans/:id`,
-  `/login`. Guard de sesión en `app/router`.
+- Rutas: `/login`, `/register`, `/` (landing), `/workspace/:tripRequestId` (split-view), `/plans`
+  (dashboard), `/plans/:id`. Guard de sesión en `app/router`.
 - Split-view: panel izquierdo = chat + chips + estado ("La IA está pensando…"); derecho = mapa +
   carrusel superpuesto + timeline. El estado del chat vive en Zustand; los datos del plan en TanStack Query.
 - El "thinking" se deriva de `tripRequest.status ∈ {GENERATING}`; no simular progreso falso.

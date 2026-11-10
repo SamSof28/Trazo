@@ -89,7 +89,7 @@ curl -i http://localhost:3000/health/ready
 
    `db:deploy` ejecuta `prisma migrate deploy` contra `DIRECT_URL` y aplica, en orden,
    `0001_init`, `0002_catalog_search`, `0003_trip_request_adults_nullable`,
-   `0004_plan_saved_margin_image` y `0005_transport_image`. No uses `db:migrate` contra Supabase:
+   `0004_plan_saved_margin_image`, `0005_transport_image` y `0006_user_agency`. No uses `db:migrate` contra Supabase:
    crea una *shadow database* y falla en planes gratuitos.
 6. **Sembrar admin y catálogo.**
 
@@ -176,6 +176,7 @@ backend/
     migrations/0003_trip_request_adults_nullable/ # adults nullable + CHECK de intake
     migrations/0004_plan_saved_margin_image/ # SAVED, margen 0–100 e image_url del ítem
     migrations/0005_transport_image/ # image_url de transporte
+    migrations/0006_user_agency/     # agencia opcional del asesor
     assets/catalog/               # WebP locales opcionales para el seed
     seed.ts                       # admin + catálogo de Colombia idempotente
   src/
@@ -356,6 +357,7 @@ Router montado en `/api/v1` (`backend/src/interfaces/http/routes.ts`).
 
 | Método | Ruta | Auth | Controller | Caso de uso | Estado |
 |---|---|---|---|---|---|
+| `POST` | `/auth/register` | público (rate limit 5/min/IP) | `AuthController.register` | `RegisterUseCase` | ✅ |
 | `POST` | `/auth/login` | público (rate limit 5/min/IP) | `AuthController.login` | `LoginUseCase` | ✅ |
 | `POST` | `/auth/refresh` | cookie `refresh_token` (30/min/IP) | `AuthController.refresh` | `RefreshUseCase` | ✅ |
 | `POST` | `/auth/logout` | cookie `refresh_token` | `AuthController.logout` | `LogoutUseCase` | ✅ |
@@ -426,6 +428,7 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/a
     "id": "uuid",
     "name": "Administrador",
     "email": "admin@trazo.co",
+    "agency": null,
     "role": "ADMIN",
     "isActive": true,
     "createdAt": "2026-11-02T15:00:00.000Z",
@@ -438,6 +441,33 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/a
 - Mismo error para email inexistente y contraseña incorrecta (`401 UNAUTHENTICATED`).
 - El hash de contraseña **nunca** sale en la respuesta.
 - El refresh token va **solo** en la cookie; el cuerpo no lo incluye.
+
+### 4.1.1 `POST /api/v1/auth/register`
+
+```http
+POST /api/v1/auth/register
+Content-Type: application/json
+
+{
+  "name": "María Gómez",
+  "agency": "Viajes del Valle",
+  "email": "maria@agencia.co",
+  "password": "password-larga-123",
+  "acceptTerms": true
+}
+```
+
+```http
+201 Created
+Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Expires=...
+
+{ "accessToken": "eyJ...", "expiresIn": 900, "user": { ...PublicUser } }
+```
+
+- El rol siempre es `ADVISOR`; no se acepta `role` en el payload.
+- `agency` es opcional; el email se normaliza y un duplicado responde `409 CONFLICT`.
+- Deja la sesión abierta: access token + cookie de refresh.
+- `password` mínimo 12 caracteres; `acceptTerms` debe ser `true`.
 
 ### 4.2 `POST /api/v1/auth/refresh`
 
@@ -481,8 +511,8 @@ Authorization: Bearer <accessToken>
 
 ```http
 200 OK
-{ "user": { "id": "...", "name": "...", "email": "...", "role": "ADVISOR",
-            "isActive": true, "createdAt": "...", "lastLoginAt": null } }
+{ "user": { "id": "...", "name": "...", "email": "...", "agency": null,
+            "role": "ADVISOR", "isActive": true, "createdAt": "...", "lastLoginAt": null } }
 ```
 
 - Si el token expiró o es inválido: `401 UNAUTHENTICATED`.
@@ -497,8 +527,8 @@ Authorization: Bearer <accessTokenAdmin>
 
 ```http
 200 OK
-{ "users": [ { "id": "...", "name": "...", "email": "...", "role": "ADVISOR",
-               "isActive": true, "createdAt": "...", "lastLoginAt": null } ] }
+{ "users": [ { "id": "...", "name": "...", "email": "...", "agency": null,
+               "role": "ADVISOR", "isActive": true, "createdAt": "...", "lastLoginAt": null } ] }
 ```
 
 ```http
@@ -517,10 +547,10 @@ Content-Type: application/json
 ```http
 201 Created
 { "user": { "id": "...", "name": "Asesor Nuevo", "email": "asesor@agencia.co",
-            "role": "ADVISOR", "isActive": true, "createdAt": "...", "lastLoginAt": null } }
+            "agency": null, "role": "ADVISOR", "isActive": true, "createdAt": "...", "lastLoginAt": null } }
 ```
 
-- No hay registro público: solo un `ADMIN` lista o crea usuarios.
+- El registro público crea asesores; solo un `ADMIN` lista usuarios o crea cuentas con rol `ADMIN`.
 - `role` por defecto es `ADVISOR`; `password` mínimo 12 caracteres.
 - Email duplicado: `409 CONFLICT`.
 - El listado ordena por fecha de alta y nunca devuelve `passwordHash`.
@@ -1008,8 +1038,9 @@ estado entre tests.
 |---|---|
 | Scaffold, env, logger, errores, health | ✅ |
 | Prisma schema + migraciones `0001_init`–`0005_transport_image` | ✅ (aplicadas en Supabase) |
+| Migración `0006_user_agency` | ⏳ pendiente de aplicar en Supabase |
 | Seed de admin + catálogo de Colombia | ✅ (ejecutado: 1 admin, 7 destinos, 14 hoteles, 28 actividades, 15 transportes) |
-| Login, refresh rotativo, logout, `/auth/me` | ✅ |
+| Registro público, login, refresh rotativo, logout, `/auth/me` | ✅ |
 | RBAC `ADMIN` + `GET/POST /users` | ✅ |
 | Catálogo backend: destinos, hoteles, actividades y transporte | ✅ (lectura + CRUD `ADMIN`, soft delete) |
 | Intake backend: `TripRequest`, parser determinista, preguntas y respuestas | ✅ (Fase 3.1–3.2) |

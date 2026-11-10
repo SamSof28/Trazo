@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import type { PublicUser } from '@trazo/shared';
+import type { PublicUser, RegisterInput } from '@trazo/shared';
 import {
   fetchCurrentUser,
   loginRequest,
   logoutRequest,
   refreshSession,
+  registerRequest,
   setAccessToken,
 } from '../../shared/api/client';
 
@@ -14,6 +15,7 @@ interface AuthState {
   setSession: (user: PublicUser, token: string) => void;
   restoreSession: () => Promise<boolean>;
   login: (email: string, password: string) => Promise<PublicUser>;
+  register: (input: RegisterInput) => Promise<PublicUser>;
   logout: () => Promise<void>;
 }
 
@@ -48,6 +50,18 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ status: 'loading' });
     try {
       const session = await loginRequest(email, password);
+      set({ user: session.user, status: 'authenticated' });
+      return session.user;
+    } catch (err) {
+      set({ user: null, status: 'unauthenticated' });
+      throw err;
+    }
+  },
+
+  register: async (input) => {
+    set({ status: 'loading' });
+    try {
+      const session = await registerRequest(input);
       set({ user: session.user, status: 'authenticated' });
       return session.user;
     } catch (err) {

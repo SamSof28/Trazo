@@ -9,11 +9,11 @@ La experiencia se inspira en [layla.ai](https://layla.ai/es): sin formularios de
 
 > **Estado:** los backends de las fases 0–7 ya están implementados (monorepo, configuración validada,
 > identidad, RBAC, catálogo, intake conversacional determinista, generación con IA anclada al catálogo,
-> edición de planes, publicación, reportes y PDF) con **131 tests de backend + 6 de shared**. La base
+> edición de planes, publicación, reportes y PDF) con **138 tests de backend + 6 de shared**. La base
 > Supabase está migrada y sembrada con **7 destinos** (Cartagena, Eje Cafetero, Medellín, San Andrés,
-> Santa Marta, Bogotá y Guatapé). El frontend implementa login, guards, cliente API con refresh,
-> landing, catálogo y ficha de destino, intake conversacional, workspace del plan, dashboard y
-> administración del equipo. Siguen pendientes la disponibilidad de catálogo (HU 3.3–3.4), el clima
+> Santa Marta, Bogotá y Guatapé). El frontend implementa login, registro público de asesores, guards,
+> cliente API con refresh, landing, catálogo y ficha de destino, intake conversacional, workspace del
+> plan, dashboard y administración del equipo. Siguen pendientes la disponibilidad de catálogo (HU 3.3–3.4), el clima
 > (HU 2.6), el chat de refinamiento, el mapa Leaflet embebido y las pruebas de carga. Este README y
 > `AGENTS.md` son la fuente de verdad del producto y del dominio; `docs/` contiene arquitectura,
 > contrato de API, modelo de datos, mapa del backend, IA, despliegue y hoja de ruta. Léelos antes de

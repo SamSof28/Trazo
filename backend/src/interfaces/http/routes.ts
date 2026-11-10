@@ -21,6 +21,7 @@ import {
   planIdParamsSchema,
   planItemParamsSchema,
   planReportQuerySchema,
+  registerSchema,
   replacePlanItemSchema,
   tripRequestIdParamsSchema,
   updateActivitySchema,
@@ -45,6 +46,7 @@ import {
   generationLimiter,
   loginLimiter,
   refreshLimiter,
+  registerLimiter,
   tripRequestLimiter,
 } from './rate-limit.js';
 
@@ -65,6 +67,12 @@ export function createApiRouter(deps: ApiRouterDependencies): Router {
   const auth = requireAuth(deps.accessTokens);
   const admin = requireRole('ADMIN');
 
+  router.post(
+    '/auth/register',
+    registerLimiter,
+    validateBody(registerSchema),
+    deps.authController.register,
+  );
   router.post('/auth/login', loginLimiter, validateBody(loginSchema), deps.authController.login);
   router.post('/auth/refresh', refreshLimiter, deps.authController.refresh);
   router.post('/auth/logout', deps.authController.logout);

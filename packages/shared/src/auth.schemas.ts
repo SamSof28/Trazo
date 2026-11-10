@@ -30,5 +30,27 @@ export const createUserSchema = z
   })
   .strict();
 
+export const registerSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, 'El nombre debe tener al menos 2 caracteres')
+      .max(120, 'El nombre no puede superar 120 caracteres'),
+    agency: z
+      .string()
+      .trim()
+      .max(120, 'La agencia no puede superar 120 caracteres')
+      .optional()
+      .transform((value) => value || undefined),
+    email: emailSchema,
+    password: passwordSchema,
+    acceptTerms: z.boolean().refine((value) => value === true, {
+      message: 'Debes aceptar los términos para crear tu cuenta',
+    }),
+  })
+  .strict();
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type CreateUserInput = z.infer<typeof createUserSchema>;
+export type RegisterInput = z.infer<typeof registerSchema>;

@@ -20,6 +20,7 @@ export function makeUser(overrides: Partial<Parameters<typeof User.fromPersisten
     id: 'user-1',
     name: 'Asesor Demo',
     email: 'asesor@trazo.co',
+    agency: null,
     passwordHash: 'hashed:secret-password',
     role: 'ADVISOR',
     active: true,
@@ -53,6 +54,7 @@ export class InMemoryUserRepository implements UserRepository {
   async create(input: CreateUserInput): Promise<User> {
     const user = User.fromPersistence({
       ...input,
+      agency: input.agency ?? null,
       active: true,
       lastLoginAt: null,
       createdAt: NOW,

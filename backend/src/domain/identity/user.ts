@@ -5,6 +5,7 @@ export interface UserProps {
   id: string;
   name: string;
   email: string;
+  agency: string | null;
   passwordHash: string;
   role: Role;
   active: boolean;
@@ -26,15 +27,20 @@ export class User {
     id: string;
     name: string;
     email: string;
+    agency?: string | null;
     passwordHash: string;
     role: Role;
     now: Date;
   }): User {
     const name = input.name.trim();
     const email = input.email.trim().toLowerCase();
+    const agency = input.agency?.trim() || null;
 
     if (name.length < 2 || name.length > 120) {
       throw new ValidationError('El nombre debe tener entre 2 y 120 caracteres');
+    }
+    if (agency && agency.length > 120) {
+      throw new ValidationError('La agencia no puede superar 120 caracteres');
     }
     if (!EMAIL.test(email) || email.length > 320) {
       throw new ValidationError('El email no es válido');
@@ -47,6 +53,7 @@ export class User {
       id: input.id,
       name,
       email,
+      agency,
       passwordHash: input.passwordHash,
       role: input.role,
       active: true,
@@ -66,6 +73,10 @@ export class User {
 
   get email(): string {
     return this.props.email;
+  }
+
+  get agency(): string | null {
+    return this.props.agency;
   }
 
   get passwordHash(): string {
@@ -97,6 +108,7 @@ export class User {
       id: this.props.id,
       name: this.props.name,
       email: this.props.email,
+      agency: this.props.agency,
       role: this.props.role,
       isActive: this.props.active,
       createdAt: this.props.createdAt.toISOString(),

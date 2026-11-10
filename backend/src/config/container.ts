@@ -3,6 +3,7 @@ import { env } from './env.js';
 import { logger } from './logger.js';
 import type { AccessTokenService } from '../domain/identity/ports.js';
 import { LoginUseCase } from '../application/identity/login.use-case.js';
+import { RegisterUseCase } from '../application/identity/register.use-case.js';
 import { RefreshUseCase } from '../application/identity/refresh.use-case.js';
 import { LogoutUseCase } from '../application/identity/logout.use-case.js';
 import { CreateUserUseCase } from '../application/identity/create-user.use-case.js';
@@ -116,6 +117,15 @@ export function buildContainer(): Container {
     clock,
     env.REFRESH_TOKEN_TTL_DAYS,
   );
+  const registerUseCase = new RegisterUseCase(
+    users,
+    hasher,
+    accessTokens,
+    refreshTokens,
+    tokens,
+    clock,
+    env.REFRESH_TOKEN_TTL_DAYS,
+  );
   const refreshUseCase = new RefreshUseCase(
     users,
     accessTokens,
@@ -206,7 +216,13 @@ export function buildContainer(): Container {
   return {
     prisma,
     accessTokens,
-    authController: new AuthController(loginUseCase, refreshUseCase, logoutUseCase, getMeUseCase),
+    authController: new AuthController(
+      loginUseCase,
+      registerUseCase,
+      refreshUseCase,
+      logoutUseCase,
+      getMeUseCase,
+    ),
     userController: new UserController(createUserUseCase, listUsersUseCase),
     destinationController,
     hotelController,

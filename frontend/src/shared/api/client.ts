@@ -9,6 +9,7 @@ import type {
   Paginated,
   PlanResponse,
   PlanAlternativesResponse,
+  RegisterInput,
   UpdatePlanInput,
   ReplacePlanItemInput,
 } from '@trazo/shared';
@@ -162,6 +163,19 @@ export async function loginRequest(email: string, password: string): Promise<Aut
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
+  });
+
+  const data = await parseResponse<AuthSessionResponse>(response);
+  accessToken = data.accessToken;
+  return data;
+}
+
+export async function registerRequest(payload: RegisterInput): Promise<AuthSessionResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
   });
 
   const data = await parseResponse<AuthSessionResponse>(response);

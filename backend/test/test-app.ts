@@ -2,6 +2,7 @@ import request from 'supertest';
 import type { Express } from 'express';
 import { createApp } from '../src/app.js';
 import { LoginUseCase } from '../src/application/identity/login.use-case.js';
+import { RegisterUseCase } from '../src/application/identity/register.use-case.js';
 import { RefreshUseCase } from '../src/application/identity/refresh.use-case.js';
 import { LogoutUseCase } from '../src/application/identity/logout.use-case.js';
 import { CreateUserUseCase } from '../src/application/identity/create-user.use-case.js';
@@ -214,6 +215,7 @@ export function buildTestApp(): {
 
   const authController = new AuthController(
     new LoginUseCase(users, hasher, accessTokens, refreshTokens, tokens, clock, 7),
+    new RegisterUseCase(users, hasher, accessTokens, refreshTokens, tokens, clock, 7),
     new RefreshUseCase(users, accessTokens, refreshTokens, tokens, clock, 7),
     new LogoutUseCase(refreshTokens, tokens, clock),
     new GetMeUseCase(users),

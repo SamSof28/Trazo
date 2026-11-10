@@ -28,6 +28,7 @@ export interface CreateUserInput {
   id: string;
   name: string;
   email: string;
+  agency?: string | null;
   passwordHash: string;
   role: Role;
 }

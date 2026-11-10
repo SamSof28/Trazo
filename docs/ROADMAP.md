@@ -6,7 +6,8 @@ docs. No se hace `git commit` sin autorización del usuario.
 
 **Fase actual: 7 — Reportes y endurecimiento (backend completo, frontend de negocio completo).**
 Fases 4–7 implementadas en backend: generación con IA anclada al catálogo, edición y presupuesto,
-guardado/publicación/dashboard API, reportes JSON/CSV y PDF. El frontend implementa login, guards,
+guardado/publicación/dashboard API, reportes JSON/CSV y PDF. El frontend implementa login, registro
+público de asesores, guards,
 cliente HTTP con refresh, landing, catálogo y ficha de destino, intake conversacional, workspace del
 plan, dashboard y administración del equipo. Quedan la disponibilidad de catálogo 2.5 (HU 3.3–3.4),
 el clima 5.7, el chat de refinamiento 5.8, el mapa Leaflet embebido y las pruebas de carga 7.3. Las
@@ -37,14 +38,14 @@ Supabase.
 
 | Rebanada | Entrega | Estado |
 |---|---|---|
-| 1.1 | `User` + `PasswordHasher` (argon2id) + `POST /auth/login` + test de credenciales | ✅ |
+| 1.1 | `User` + `PasswordHasher` (argon2id) + `POST /auth/login` + `POST /auth/register` + tests | ✅ |
 | 1.2 | Access JWT + refresh rotativo con familia y detección de reuso + `/auth/refresh`, `/auth/logout` | ✅ |
 | 1.3 | `requireAuth`, `requireRole`, `GET /auth/me`, `GET/POST /users` (ADMIN) | ✅ |
 | 1.4 | Frontend: `/login`, guard de rutas, restauración de sesión, cliente HTTP con refresh silencioso | ✅ |
 
-**DoD:** no existe registro público; un `ADVISOR` no puede crear usuarios; reuso de refresh revoca la
-familia; tests de 401/403/429. Backend cumplido (22 tests + 6 de shared); 1.4 cumplido en su alcance de
-autenticación.
+**DoD:** el registro público crea solo `ADVISOR`; un `ADVISOR` no puede crear usuarios ni cambiar
+roles; reuso de refresh revoca la familia; tests de 401/403/429. Backend cumplido; 1.4 cumplido en su
+alcance de autenticación, incluido el enlace y la página `/register`.
 
 ## Fase 2 — Catálogo
 
@@ -72,7 +73,7 @@ aplicada y seed ejecutado); 2.4 está implementado y falta 2.5.
 **DoD:** un prompt incompleto nunca falla; máx. 2 preguntas por turno; `missingFields` correcto;
 tests de extracción con ≥ 10 prompts reales. Backend cumplido: 3.1–3.2 implementados, migración
 `0003_trip_request_adults_nullable`; 3.3–3.4 están implementados en el frontend. La suite completa
-suma 131 tests de backend.
+suma 138 tests de backend.
 
 ## Fase 4 — Generación con IA anclada al catálogo
 

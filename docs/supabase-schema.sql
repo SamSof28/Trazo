@@ -1,6 +1,6 @@
 -- Trazo · esquema completo para Supabase/PostgreSQL
--- Generado desde backend/prisma/migrations (0001–0005).
--- Proyecto aplicado: dewtkwfoziiqkeijbipg (bucket Storage: catalog).
+-- Generado desde backend/prisma/migrations (0001–0006).
+-- Proyecto aplicado: dewtkwfoziiqkeijbipg (bucket Storage: catalog; 0006 pendiente).
 -- Fecha: 2026-11-03.
 --
 -- Uso recomendado en el backend:
@@ -20,6 +20,7 @@
 --   0003_trip_request_adults_nullable: Adultos nullable en solicitudes incompletas
 --   0004_plan_saved_margin_image: Estado SAVED, margen 0–100 y snapshot de imagen
 --   0005_transport_image: Imagen principal de transporte
+--   0006_user_agency: Agencia opcional del asesor
 
 -- ============================================================================
 -- 0001_init — Fundación: usuarios, catálogo, intake, planes, IA
@@ -58,6 +59,7 @@ CREATE TYPE "AiJobStatus" AS ENUM ('QUEUED', 'RUNNING', 'SUCCEEDED', 'FAILED');
 CREATE TABLE "users" (
     "id" UUID NOT NULL,
     "name" VARCHAR(120) NOT NULL,
+    "agency" VARCHAR(120),
     "email" VARCHAR(320) NOT NULL,
     "password_hash" TEXT NOT NULL,
     "role" "Role" NOT NULL DEFAULT 'ADVISOR',
@@ -478,3 +480,9 @@ ALTER TABLE "plan_items" ADD COLUMN "image_url" TEXT;
 -- Every catalog entity exposes a main image so the frontend can render
 -- destinations, hotels, activities and transport with the same contract.
 ALTER TABLE "transport_options" ADD COLUMN "image_url" TEXT;
+
+-- ============================================================================
+-- 0006_user_agency — Agencia opcional del asesor
+-- ============================================================================
+-- Included directly in the "users" CREATE TABLE above for a fresh bootstrap.
+-- Existing databases apply it with: ALTER TABLE "users" ADD COLUMN "agency" VARCHAR(120);

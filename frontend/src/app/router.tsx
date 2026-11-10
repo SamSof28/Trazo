@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { LoginPage } from '../features/auth/LoginPage';
+import { RegisterPage } from '../features/auth/RegisterPage';
 import { LandingPage } from '../features/intake/LandingPage';
 import { WorkspaceIntakePage } from '../features/workspace/WorkspaceIntakePage';
 import { WorkspacePlanPage } from '../features/workspace/WorkspacePlanPage';
@@ -15,6 +16,10 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+  },
+  {
+    path: '/register',
+    element: <RegisterPage />,
   },
   {
     element: <ProtectedRoute />,

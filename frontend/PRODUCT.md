@@ -46,7 +46,7 @@ The AI never invents prices or final names. It proposes a structure anchored to 
 - Name: **Trazo**. Voice: warm, direct, editorial, a little playful; Spanish (Colombia), no corporate filler.
 - The product should feel like a travel atelier, not a booking engine: paper, maps, routes, handwritten annotations, real place names.
 - Existing palette and type: forest, sand, mint, teal, orange and gold; Bricolage Grotesque for display, DM Sans for UI. Preserve them.
-- Existing visual references: `docs/mockups/*.html` and the login screen. The world is soft, rounded, optimistic and precise.
+- Existing visual references: `docs/mockups/*.html`, the login screen and `frontend/Registro-html/Register.dc.html`. The world is soft, rounded, optimistic and precise.
 
 ## Evidence on Hand
 

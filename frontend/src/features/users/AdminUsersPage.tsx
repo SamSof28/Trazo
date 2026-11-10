@@ -402,7 +402,9 @@ const TeamRow: React.FC<{ user: PublicUser; isCurrent: boolean }> = ({ user, isC
             </span>
           ) : null}
         </p>
-        <p className="truncate text-xs text-muted">{user.email}</p>
+        <p className="truncate text-xs text-muted">
+          {user.agency ? `${user.agency} · ${user.email}` : user.email}
+        </p>
       </div>
     </div>
 

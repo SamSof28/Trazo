@@ -30,6 +30,7 @@ Convenciones: `id uuid` (generado por `gen_random_uuid()`), `created_at/updated_
 |---|---|---|
 | `id` | uuid PK | |
 | `name` | text | 2–120 |
+| `agency` | varchar(120) | nullable; agencia del asesor |
 | `email` | citext UNIQUE | normalizado a minúsculas |
 | `password_hash` | text | argon2id |
 | `role` | enum | `ADVISOR` \| `ADMIN` |

@@ -3,13 +3,14 @@
 Guía para llevar Trazo de local a producción. Cubre la base de datos en Supabase, las migraciones,
 el seed, el hosting del backend y el despliegue del SPA en Vercel.
 
-> **Estado (2026-11-08):** las 5 migraciones ya están aplicadas en Supabase y el seed está cargado
-> (1 admin, 7 destinos, 14 hoteles, 28 actividades y 15 transportes). El backend está listo para que
-> el frontend consuma la API. Las imágenes de los 7 destinos ya están versionadas como WebP local y
-> se muestran desde `frontend/public/images/destinations/`; al correr el seed con Storage se suben al
-> bucket `catalog`. El `frontend/` implementa login,
-> guards, cliente API con refresh, landing, catálogo, intake, workspace del plan, dashboard y
-> administración del equipo.
+> **Estado (2026-11-09):** las migraciones `0001`–`0005` ya están aplicadas en Supabase y el seed
+> está cargado (1 admin, 7 destinos, 14 hoteles, 28 actividades y 15 transportes). **Antes de exponer
+> el registro público hay que aplicar `0006_user_agency`** (`npm run db:deploy -w backend`). El backend
+> está listo para que el frontend consuma la API. Las imágenes de los 7 destinos ya están versionadas
+> como WebP local y se muestran desde `frontend/public/images/destinations/`; al correr el seed con
+> Storage se suben al bucket `catalog`. El `frontend/` implementa login, registro público, guards,
+> cliente API con refresh, landing, catálogo, intake, workspace del plan, dashboard y administración
+> del equipo.
 
 ---
 
@@ -53,8 +54,9 @@ el SPA.
 
 ### 1.2 Orden de despliegue
 
-1. **Supabase** (ya está): migraciones aplicadas y seed cargado. Para una base nueva,
-   `npm run db:deploy -w backend` y `npm run db:seed -w backend`.
+1. **Supabase** (casi listo): `0001`–`0005` aplicadas y seed cargado. Ejecuta
+   `npm run db:deploy -w backend` para aplicar `0006_user_agency` antes de probar el registro. Para
+   una base nueva, `npm run db:deploy -w backend` y `npm run db:seed -w backend`.
 2. **Backend** en Render/Railway/Fly: variables de entorno, build con Prisma generate, health check
    `/health`. Anota la URL pública (`https://<api>.onrender.com`).
 3. **Frontend** en Vercel: build de `@trazo/shared` + `frontend`, output `frontend/dist`, `vercel.json`
@@ -129,6 +131,7 @@ npm run db:deploy -w backend
 3. `0003_trip_request_adults_nullable`
 4. `0004_plan_saved_margin_image` (`SAVED`, margen 0–100 e `image_url` del ítem)
 5. `0005_transport_image` (`image_url` de transporte)
+6. `0006_user_agency` (`agency` opcional del asesor)
 
 No uses `npm run db:migrate` contra Supabase: `prisma migrate dev` crea una *shadow database* y falla en
 planes gratuitos. `db:migrate` es solo para desarrollo local.
@@ -408,24 +411,29 @@ Sustituye `$API` por la URL pública (o por `https://trazo.vercel.app/api/v1` si
 curl -sS "$API/health"
 curl -sS "$API/health/ready"
 
-# 2. Login del admin (guarda la cookie de refresh)
+# 2. Registro público de un asesor (guarda la cookie de refresh)
+curl -sS -c cookies.txt -X POST "$API/auth/register" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Asesor Demo","agency":"Viajes del Valle","email":"asesor.demo@agencia.co","password":"password-larga-123","acceptTerms":true}'
+
+# 3. Login del admin (guarda la cookie de refresh)
 curl -sS -c cookies.txt -X POST "$API/auth/login" \
   -H 'Content-Type: application/json' \
   -d '{"email":"admin@trazo.co","password":"<password>"}'
 
-# 3. Crear una solicitud completa
+# 4. Crear una solicitud completa
 curl -sS -b cookies.txt -X POST "$API/trip-requests" \
   -H 'Content-Type: application/json' \
   -H "Authorization: Bearer <accessToken>" \
   -d '{"prompt":"Viaje a Cartagena para 2 adultos, 5 días, presupuesto de 3 millones, con playa"}'
 
-# 4. Generar (202) y consultar el estado
+# 5. Generar (202) y consultar el estado
 curl -sS -b cookies.txt -X POST "$API/trip-requests/<id>/generate" \
   -H "Authorization: Bearer <accessToken>"
 curl -sS -b cookies.txt "$API/trip-requests/<id>" \
   -H "Authorization: Bearer <accessToken>"
 
-# 5. Leer el plan, el reporte y el PDF
+# 6. Leer el plan, el reporte y el PDF
 curl -sS -b cookies.txt "$API/plans/<planId>" -H "Authorization: Bearer <accessToken>"
 curl -sS -b cookies.txt "$API/plans/<planId>/report?format=csv" -H "Authorization: Bearer <accessToken>"
 curl -sS -b cookies.txt "$API/plans/<planId>/pdf" -H "Authorization: Bearer <accessToken>" -o plan.pdf

@@ -4,6 +4,7 @@ export interface PublicUser {
   id: string;
   name: string;
   email: string;
+  agency: string | null;
   role: Role;
   isActive: boolean;
   createdAt: string;
