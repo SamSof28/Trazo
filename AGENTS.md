@@ -82,10 +82,11 @@ npm run db:seed -w backend
   dashboard API y reportes JSON/CSV + PDF. Incluye el puerto `ObjectStorage` y el adaptador REST
   `SupabaseStorage` (bucket público `catalog`) usado por el seed.
 - **Tests:** 131 de backend + 6 de `packages/shared`, con fakes (sin DB ni red). `npm run verify` en
-  verde el 2026-11-08.
-- **Datos sembrados:** 1 admin, 7 destinos, 14 hoteles, 28 actividades y 15 transportes. Las imágenes
-  actuales son URLs de `picsum.photos`; los campos `heroImageUrl`/`imageUrl` ya existen y el seed sube
-  WebP locales a Storage cuando se agregan a `backend/prisma/assets/catalog/`.
+  verde el 2026-11-09.
+- **Datos sembrados:** 1 admin, 7 destinos, 14 hoteles, 28 actividades y 15 transportes. Las 7 fotos
+  de destinos ya están versionadas en `frontend/public/images/destinations/` y
+  `backend/prisma/assets/catalog/destinations/`; el seed las sube a Storage y, sin Storage, el SPA usa
+  las locales. Hoteles, actividades y transporte heredan la foto del destino si no tienen una propia.
 - **IA verificada:** `AI_PROVIDER=gemini` con `gemini-3-flash-preview`; se generó un plan real de 3
   días con IDs del catálogo. `gemini-2.5-flash` ya no está disponible para cuentas nuevas.
 - **Auditoría:** `npm audit` y `npm audit --omit=dev` en 0 (Vitest 5.1, ESLint 10.14 y overrides de

@@ -19,6 +19,7 @@ import {
   statusVariant,
   titleCase,
 } from '../../shared/lib/format';
+import { destinationImage } from '../../shared/lib/images';
 
 type StatusFilter = 'ALL' | PlanStatus;
 
@@ -68,7 +69,10 @@ const PlanCard: React.FC<{
 }> = ({ plan, onDuplicate, onDownload, duplicating, downloading }) => {
   const range = dateRangeFromDays(plan.days);
   const title = plan.title ?? `${plan.destination.city} · ${plan.days.length} días`;
-  const image = plan.heroImageUrl ?? plan.destination.heroImageUrl;
+  const image = destinationImage(
+    plan.destination.slug,
+    plan.heroImageUrl ?? plan.destination.heroImageUrl,
+  );
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-[24px] border border-divider bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_26px_46px_-26px_rgba(16,38,42,0.35)]">
@@ -80,7 +84,7 @@ const PlanCard: React.FC<{
         {image ? (
           <img
             src={image}
-            alt={`Imagen de referencia de ${plan.destination.city}`}
+            alt={`Imagen de ${plan.destination.city}`}
             loading="lazy"
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
           />

@@ -45,6 +45,7 @@ import {
   transportModeLabel,
   typeLabel,
 } from '../../shared/lib/format';
+import { destinationImage } from '../../shared/lib/images';
 
 type ConfirmAction = 'publish' | 'archive' | 'duplicate';
 type AddType = PlanItemType;
@@ -476,7 +477,10 @@ export const WorkspacePlanPage: React.FC = () => {
   }
 
   const range = dateRangeFromDays(plan.days);
-  const heroImage = plan.heroImageUrl ?? plan.destination.heroImageUrl;
+  const heroImage = destinationImage(
+    plan.destination.slug,
+    plan.heroImageUrl ?? plan.destination.heroImageUrl,
+  );
   const title = planTitle(plan);
 
   return (
@@ -611,7 +615,7 @@ export const WorkspacePlanPage: React.FC = () => {
             {heroImage ? (
               <img
                 src={heroImage}
-                alt={`Imagen de referencia de ${plan.destination.city}`}
+                alt={`Imagen de ${plan.destination.city}`}
                 className="absolute inset-0 h-full w-full object-cover"
               />
             ) : (

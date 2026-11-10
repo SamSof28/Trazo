@@ -82,8 +82,10 @@ destinos activos. La migración `0002_catalog_search` crea `pg_trgm`, los índic
 **Imágenes de catálogo.** Cada entidad tiene una sola imagen principal: `destinations.hero_image_url`,
 `hotels.image_url`, `activities.image_url` y `transport_options.image_url`. Los archivos viven en el
 bucket público `catalog` de Supabase Storage y la base solo guarda la URL pública. El seed sube los
-WebP locales de `backend/prisma/assets/catalog/` y usa `picsum.photos` como fallback de desarrollo si
-Storage no está configurado o falta el archivo. `plans.hero_image_url` y `plan_items.image_url` son
+WebP locales de `backend/prisma/assets/catalog/`; si Storage no está configurado o falta el archivo,
+deja la URL en `null` y el SPA usa las fotos locales de
+`frontend/public/images/destinations/<slug>.webp`. Hoteles, actividades y transporte heredan la foto
+del destino cuando no tienen una propia. `plans.hero_image_url` y `plan_items.image_url` son
 snapshots: un plan publicado conserva la imagen que tenía al generarse aunque el catálogo cambie.
 
 

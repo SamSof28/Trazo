@@ -5,8 +5,9 @@ el seed, el hosting del backend y el despliegue del SPA en Vercel.
 
 > **Estado (2026-11-08):** las 5 migraciones ya están aplicadas en Supabase y el seed está cargado
 > (1 admin, 7 destinos, 14 hoteles, 28 actividades y 15 transportes). El backend está listo para que
-> el frontend consuma la API. Las imágenes del catálogo usan `picsum.photos` como placeholder hasta
-> que se generen/suban los WebP definitivos a Supabase Storage. El `frontend/` implementa login,
+> el frontend consuma la API. Las imágenes de los 7 destinos ya están versionadas como WebP local y
+> se muestran desde `frontend/public/images/destinations/`; al correr el seed con Storage se suben al
+> bucket `catalog`. El `frontend/` implementa login,
 > guards, cliente API con refresh, landing, catálogo, intake, workspace del plan, dashboard y
 > administración del equipo.
 
@@ -152,7 +153,9 @@ El seed es idempotente (upserts) y usa `DIRECT_URL`. Requiere `ADMIN_EMAIL` y `A
 El bucket público es `catalog`. El seed crea el bucket si no existe y sube los WebP locales de
 `backend/prisma/assets/catalog/` con `x-upsert: true`; la base guarda solo la URL pública. Si
 `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` no están configurados o falta el archivo local, el seed
-usa `picsum.photos` como fallback de desarrollo (es el estado actual).
+deja la URL en `null`; el SPA usa las fotos locales de `frontend/public/images/destinations/` y las
+hereda para hoteles, actividades y transporte cuando no hay asset específico. Las 7 fotos actuales
+de destinos ya están versionadas en ambas carpetas.
 
 ```dotenv
 SUPABASE_URL=https://<ref>.supabase.co

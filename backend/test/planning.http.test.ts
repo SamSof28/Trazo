@@ -79,6 +79,7 @@ describe('HTTP plan generation', () => {
     expect(plan.body.plan.budget.total.amountMinor).toBeGreaterThan(0);
     expect(plan.body.plan.currency).toBe('COP');
     expect(plan.body.plan.destination.city).toBe('Cartagena');
+    expect(plan.body.plan.destination.slug).toBe('cartagena');
 
     const jobs = built.planning.aiJobs.all();
     expect(jobs).toHaveLength(1);

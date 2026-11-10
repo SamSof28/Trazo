@@ -35,20 +35,44 @@ function slugify(value: string): string {
     .slice(0, 120);
 }
 
-async function resolveImageUrl(key: string, fallbackSeed: string): Promise<string> {
-  const objectPath = `${key}.webp`;
-  const localPath = join(assetsDir, objectPath);
+const uploadedImageUrls = new Map<string, string | null>();
 
-  if (storage && existsSync(localPath)) {
-    const body = await readFile(localPath);
-    await storage.upload({ path: objectPath, body, contentType: 'image/webp' });
-    return storage.publicUrl(objectPath);
+async function uploadCatalogImage(objectPath: string): Promise<string | null> {
+  if (uploadedImageUrls.has(objectPath)) return uploadedImageUrls.get(objectPath) ?? null;
+
+  const localPath = join(assetsDir, objectPath);
+  const activeStorage = storage;
+  if (!activeStorage || !existsSync(localPath)) {
+    uploadedImageUrls.set(objectPath, null);
+    return null;
+  }
+
+  const body = await readFile(localPath);
+  await activeStorage.upload({ path: objectPath, body, contentType: 'image/webp' });
+  const url = activeStorage.publicUrl(objectPath);
+  uploadedImageUrls.set(objectPath, url);
+  return url;
+}
+
+/**
+ * Returns the public URL of the specific asset, or the destination hero as a
+ * fallback when the catalog item does not have its own photo yet. When Storage
+ * is not configured it returns null; the SPA renders the local destination
+ * images from `frontend/public/images/destinations/`.
+ */
+async function resolveImageUrl(key: string, fallbackKey?: string): Promise<string | null> {
+  const ownUrl = await uploadCatalogImage(`${key}.webp`);
+  if (ownUrl) return ownUrl;
+
+  if (fallbackKey) {
+    const fallbackUrl = await uploadCatalogImage(`${fallbackKey}.webp`);
+    if (fallbackUrl) return fallbackUrl;
   }
 
   if (storage) {
-    console.warn(`[seed] Missing local image ${objectPath}; using placeholder`);
+    console.warn(`[seed] Missing local image for ${key}; leaving image empty`);
   }
-  return `https://picsum.photos/seed/${fallbackSeed}/1600/900`;
+  return null;
 }
 
 interface DestinationSeed {
@@ -715,10 +739,7 @@ async function seedCatalog(): Promise<void> {
   const destinationIds = new Map<string, string>();
 
   for (const destination of destinations) {
-    const heroImageUrl = await resolveImageUrl(
-      `destinations/${destination.slug}`,
-      `trazo-${destination.slug}`,
-    );
+    const heroImageUrl = await resolveImageUrl(`destinations/${destination.slug}`);
     const row = await prisma.destination.upsert({
       where: { slug: destination.slug },
       update: {
@@ -754,7 +775,7 @@ async function seedCatalog(): Promise<void> {
       });
       const imageUrl = await resolveImageUrl(
         `hotels/${slug}/${slugify(hotel.name)}`,
-        `trazo-${slugify(hotel.name)}`,
+        `destinations/${slug}`,
       );
       const data = { ...hotel, destinationId, currency: 'COP', imageUrl, isActive: true };
       if (existing) {
@@ -777,7 +798,7 @@ async function seedCatalog(): Promise<void> {
       });
       const imageUrl = await resolveImageUrl(
         `activities/${slug}/${slugify(activity.name)}`,
-        `trazo-${slugify(activity.name)}`,
+        `destinations/${slug}`,
       );
       const data = { ...activity, destinationId, currency: 'COP', imageUrl, isActive: true };
       if (existing) {
@@ -810,7 +831,7 @@ async function seedCatalog(): Promise<void> {
     });
     const imageUrl = await resolveImageUrl(
       `transport/${option.destinationSlug}/${slugify(option.mode)}-${slugify(option.provider)}`,
-      `trazo-transport-${option.destinationSlug}-${slugify(option.provider)}`,
+      `destinations/${option.destinationSlug}`,
     );
     const data = {
       originDestinationId,
@@ -846,12 +867,14 @@ async function main(): Promise<void> {
       );
     } catch (error) {
       console.warn(
-        `Images: Supabase Storage unavailable, using placeholders (${error instanceof Error ? error.message : String(error)})`,
+        `Images: Supabase Storage unavailable; image URLs will stay null (${error instanceof Error ? error.message : String(error)})`,
       );
       storage = null;
     }
   } else {
-    console.log('Images: Supabase Storage not configured; using picsum.photos placeholders');
+    console.log(
+      'Images: Supabase Storage not configured; image URLs stay null and the SPA uses local destination photos',
+    );
   }
 
   await seedAdmin();

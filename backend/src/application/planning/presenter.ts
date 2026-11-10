@@ -73,6 +73,7 @@ export function toPlanDto(plan: Plan, destination: Destination): PlanDto {
       id: destination.id,
       city: destination.city,
       country: destination.country,
+      slug: destination.slug,
       latitude: destination.latitude,
       longitude: destination.longitude,
       timezone: destination.timezone,

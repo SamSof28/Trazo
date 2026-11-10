@@ -6,8 +6,9 @@ Documento de referencia de la arquitectura implementada. Complementa [`../README
 aquí no coincide con el código, se corrige el documento.
 
 > **Estado:** backend de las fases 0–7 implementado. El frontend tiene login, guards, cliente API y
-> refresh; las pantallas de negocio, la disponibilidad de catálogo (HU 3.3–3.4) y el clima (HU 2.6)
-> siguen pendientes.
+> refresh, landing, catálogo, intake, workspace del plan, dashboard y administración del equipo. Siguen
+> pendientes la disponibilidad de catálogo (HU 3.3–3.4), el clima (HU 2.6), el chat de refinamiento y
+> el mapa Leaflet embebido.
 
 ## 1. Principios
 
@@ -116,8 +117,12 @@ requestId → helmet → cors → json(100kb) → rateLimit → auth(JWT) → zo
 - El puerto `domain/storage/ports.ts` (`ObjectStorage`) abstrae el almacenamiento; el adaptador
   `infrastructure/storage/supabase-storage.ts` usa la API REST de Supabase Storage con `fetch`, sin
   SDK adicional.
-- Bucket público `catalog`. El seed crea el bucket y sube los WebP locales con `x-upsert: true`; si
-  Storage no está configurado, usa `picsum.photos` como fallback de desarrollo.
+- Bucket público `catalog`. El seed crea el bucket y sube los WebP locales con `x-upsert: true`.
+- Assets locales: `backend/prisma/assets/catalog/destinations/<slug>.webp` para el seed y
+  `frontend/public/images/destinations/<slug>.webp` para el SPA. Si Storage no está configurado, el
+  seed deja `heroImageUrl`/`imageUrl` en `null` y el frontend usa la foto local del destino.
+- Hoteles, actividades y transporte reutilizan la foto del destino cuando todavía no tienen un asset
+  propio; así el catálogo nunca muestra placeholders aleatorios.
 - La `service_role` solo se usa en el backend (seed/jobs operativos). El frontend recibe únicamente
   URLs públicas (`heroImageUrl` / `imageUrl`) a través de la API.
 - No hay endpoint de subida de archivos en esta fase: las imágenes se cargan por seed o se editan como

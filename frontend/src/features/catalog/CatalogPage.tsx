@@ -5,6 +5,7 @@ import type { DestinationDto } from '@trazo/shared';
 import { listDestinations } from '../../shared/api/catalog';
 import { Icon } from '../../shared/components/Icon';
 import { formatMoneyShort, titleCase } from '../../shared/lib/format';
+import { destinationImage } from '../../shared/lib/images';
 
 const filterTags = [
   'playa',
@@ -17,110 +18,118 @@ const filterTags = [
   'historia',
 ];
 
-const FeaturedDestination: React.FC<{ destination: DestinationDto }> = ({ destination }) => (
-  <Link
-    to={`/catalog/${destination.id}`}
-    className="group relative block overflow-hidden rounded-[30px] border border-divider bg-forest text-white shadow-[0_24px_50px_-28px_rgba(16,38,42,0.5)] focus-visible:outline-3 focus-visible:outline-orange focus-visible:outline-offset-3"
-  >
-    <div className="relative h-[330px] sm:h-[360px]">
-      {destination.heroImageUrl ? (
-        <img
-          src={destination.heroImageUrl}
-          alt={`Imagen de referencia de ${destination.city}`}
-          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-        />
-      ) : (
-        <div className="grid h-full w-full place-items-center bg-[linear-gradient(135deg,#10262A,#3F575B)] text-white/20">
-          <Icon name="map" size={90} strokeWidth={1.1} />
+const FeaturedDestination: React.FC<{ destination: DestinationDto }> = ({ destination }) => {
+  const image = destinationImage(destination.slug, destination.heroImageUrl);
+
+  return (
+    <Link
+      to={`/catalog/${destination.id}`}
+      className="group relative block overflow-hidden rounded-[30px] border border-divider bg-forest text-white shadow-[0_24px_50px_-28px_rgba(16,38,42,0.5)] focus-visible:outline-3 focus-visible:outline-orange focus-visible:outline-offset-3"
+    >
+      <div className="relative h-[330px] sm:h-[360px]">
+        {image ? (
+          <img
+            src={image}
+            alt={`Imagen de ${destination.city}`}
+            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center bg-[linear-gradient(135deg,#10262A,#3F575B)] text-white/20">
+            <Icon name="map" size={90} strokeWidth={1.1} />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(16,38,42,0.9)_0%,rgba(16,38,42,0.55)_55%,rgba(16,38,42,0.1)_100%)]" />
+        <div className="absolute inset-0 flex max-w-[640px] flex-col justify-end p-6 sm:p-9">
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full bg-gold px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-forest">
+              Destacado
+            </span>
+            {destination.tags.slice(0, 2).map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/90 backdrop-blur"
+              >
+                {titleCase(tag)}
+              </span>
+            ))}
+          </div>
+          <h2 className="mt-3 font-heading text-4xl font-extrabold leading-none sm:text-[46px]">
+            {destination.city}
+          </h2>
+          <p className="mt-2 max-w-[48ch] text-sm leading-relaxed text-white/75">
+            {destination.description}
+          </p>
+          <div className="mt-5 flex flex-wrap items-center gap-4">
+            <span className="inline-flex items-center gap-1.5 text-sm font-bold">
+              Explorar destino <Icon name="arrowRight" size={16} />
+            </span>
+            <span className="text-sm text-white/60">
+              Desde{' '}
+              <span className="font-bold text-white">
+                {destination.fromPrice ? formatMoneyShort(destination.fromPrice) : 'por definir'}
+              </span>
+            </span>
+          </div>
         </div>
-      )}
-      <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(16,38,42,0.9)_0%,rgba(16,38,42,0.55)_55%,rgba(16,38,42,0.1)_100%)]" />
-      <div className="absolute inset-0 flex max-w-[640px] flex-col justify-end p-6 sm:p-9">
-        <div className="flex flex-wrap gap-2">
-          <span className="rounded-full bg-gold px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-forest">
-            Destacado
-          </span>
-          {destination.tags.slice(0, 2).map((tag) => (
+      </div>
+    </Link>
+  );
+};
+
+const DestinationCard: React.FC<{ destination: DestinationDto }> = ({ destination }) => {
+  const image = destinationImage(destination.slug, destination.heroImageUrl);
+
+  return (
+    <Link
+      to={`/catalog/${destination.id}`}
+      className="group flex flex-col overflow-hidden rounded-[24px] border border-divider bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_44px_-24px_rgba(16,38,42,0.35)] focus-visible:outline-3 focus-visible:outline-orange focus-visible:outline-offset-3"
+    >
+      <div className="relative h-44 overflow-hidden bg-mint">
+        {image ? (
+          <img
+            src={image}
+            alt={`Imagen de ${destination.city}`}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center bg-[linear-gradient(135deg,#CFEAE3,#9ADBCB)] text-forest/35">
+            <Icon name="mountain" size={54} strokeWidth={1.4} />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,38,42,0.02)_35%,rgba(16,38,42,0.78))]" />
+        <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+          <p className="font-heading text-[22px] font-extrabold leading-tight">{destination.city}</p>
+          <p className="text-xs text-white/75">{destination.country}</p>
+        </div>
+      </div>
+      <div className="flex flex-1 flex-col p-5">
+        <p className="line-clamp-2 text-sm leading-relaxed text-muted">{destination.description}</p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {destination.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/90 backdrop-blur"
+              className="rounded-full bg-mint-light px-2.5 py-1 text-[11px] font-medium text-forest"
             >
               {titleCase(tag)}
             </span>
           ))}
         </div>
-        <h2 className="mt-3 font-heading text-4xl font-extrabold leading-none sm:text-[46px]">
-          {destination.city}
-        </h2>
-        <p className="mt-2 max-w-[48ch] text-sm leading-relaxed text-white/75">
-          {destination.description}
-        </p>
-        <div className="mt-5 flex flex-wrap items-center gap-4">
-          <span className="inline-flex items-center gap-1.5 text-sm font-bold">
-            Explorar destino <Icon name="arrowRight" size={16} />
-          </span>
-          <span className="text-sm text-white/60">
+        <div className="mt-auto flex items-center justify-between gap-2 pt-4">
+          <span className="text-xs text-muted">
             Desde{' '}
-            <span className="font-bold text-white">
+            <span className="text-sm font-bold text-forest">
               {destination.fromPrice ? formatMoneyShort(destination.fromPrice) : 'por definir'}
             </span>
           </span>
+          <span className="inline-flex items-center gap-1 text-xs font-bold text-forest transition-transform group-hover:translate-x-0.5">
+            Ver ficha <Icon name="arrowRight" size={14} />
+          </span>
         </div>
       </div>
-    </div>
-  </Link>
-);
-
-const DestinationCard: React.FC<{ destination: DestinationDto }> = ({ destination }) => (
-  <Link
-    to={`/catalog/${destination.id}`}
-    className="group flex flex-col overflow-hidden rounded-[24px] border border-divider bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_44px_-24px_rgba(16,38,42,0.35)] focus-visible:outline-3 focus-visible:outline-orange focus-visible:outline-offset-3"
-  >
-    <div className="relative h-44 overflow-hidden bg-mint">
-      {destination.heroImageUrl ? (
-        <img
-          src={destination.heroImageUrl}
-          alt={`Imagen de referencia de ${destination.city}`}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-        />
-      ) : (
-        <div className="grid h-full w-full place-items-center bg-[linear-gradient(135deg,#CFEAE3,#9ADBCB)] text-forest/35">
-          <Icon name="mountain" size={54} strokeWidth={1.4} />
-        </div>
-      )}
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,38,42,0.02)_35%,rgba(16,38,42,0.78))]" />
-      <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-        <p className="font-heading text-[22px] font-extrabold leading-tight">{destination.city}</p>
-        <p className="text-xs text-white/75">{destination.country}</p>
-      </div>
-    </div>
-    <div className="flex flex-1 flex-col p-5">
-      <p className="line-clamp-2 text-sm leading-relaxed text-muted">{destination.description}</p>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {destination.tags.slice(0, 3).map((tag) => (
-          <span
-            key={tag}
-            className="rounded-full bg-mint-light px-2.5 py-1 text-[11px] font-medium text-forest"
-          >
-            {titleCase(tag)}
-          </span>
-        ))}
-      </div>
-      <div className="mt-auto flex items-center justify-between gap-2 pt-4">
-        <span className="text-xs text-muted">
-          Desde{' '}
-          <span className="text-sm font-bold text-forest">
-            {destination.fromPrice ? formatMoneyShort(destination.fromPrice) : 'por definir'}
-          </span>
-        </span>
-        <span className="inline-flex items-center gap-1 text-xs font-bold text-forest transition-transform group-hover:translate-x-0.5">
-          Ver ficha <Icon name="arrowRight" size={14} />
-        </span>
-      </div>
-    </div>
-  </Link>
-);
+    </Link>
+  );
+};
 
 export const CatalogPage: React.FC = () => {
   const [query, setQuery] = useState('');
@@ -298,8 +307,8 @@ export const CatalogPage: React.FC = () => {
           </div>
 
           <p className="mt-6 text-xs text-muted">
-            {filtered.length} {filtered.length === 1 ? 'destino' : 'destinos'} · Las imágenes son
-            referencias del catálogo.
+            {filtered.length} {filtered.length === 1 ? 'destino' : 'destinos'} · Fotografías de
+            referencia de cada destino.
           </p>
         </>
       )}

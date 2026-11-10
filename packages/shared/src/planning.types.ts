@@ -9,6 +9,7 @@ export interface PlanDestinationDto {
   id: string;
   city: string;
   country: string;
+  slug: string;
   latitude: number;
   longitude: number;
   timezone: string;

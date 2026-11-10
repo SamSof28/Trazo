@@ -4,9 +4,10 @@
 > conversacional), Fase 4 (generación con IA anclada al catálogo), Fase 5 (edición y presupuesto),
 > Fase 6 (guardado, publicación y dashboard API) y Fase 7 (reportes JSON/CSV y PDF) están completos.
 > La base Supabase está migrada y sembrada (2026-11-03). El frontend ya existe: login, guards, cliente
-> API y refresh están implementados; las pantallas de negocio, la disponibilidad de catálogo
-> (HU 3.3–3.4) y el clima (HU 2.6) siguen pendientes. Este documento describe lo que **ya está
-> implementado** y el patrón exacto para agregar lo que sigue.
+> API, landing, catálogo, intake, workspace del plan, dashboard y administración del equipo. Siguen
+> pendientes la disponibilidad de catálogo (HU 3.3–3.4), el clima (HU 2.6), el chat de refinamiento y
+> el mapa Leaflet embebido. Este documento describe lo que **ya está implementado** y el patrón exacto
+> para agregar lo que sigue.
 
 Documentos relacionados: [`API.md`](API.md) (contrato REST), [`ARCHITECTURE.md`](ARCHITECTURE.md)
 (capas y seguridad), [`DOMAIN.md`](DOMAIN.md) (modelo de datos), [`AI.md`](AI.md) (Gemini y grounding)
@@ -99,7 +100,9 @@ curl -i http://localhost:3000/health/ready
    El seed es idempotente: crea/actualiza el `ADMIN` con `ADMIN_EMAIL`/`ADMIN_PASSWORD` y carga los
    destinos, hoteles, actividades y transporte de Colombia. Se conecta con `DIRECT_URL`. Si hay WebP
    en `backend/prisma/assets/catalog/` y `SUPABASE_*` está configurado, los sube al bucket `catalog`;
-   si no, usa `picsum.photos` como placeholder.
+   si no, deja la URL en `null` y el SPA usa las fotos locales de
+   `frontend/public/images/destinations/`. Hoteles, actividades y transporte heredan la foto del
+   destino cuando no tienen asset propio.
 7. **Verificar.**
 
    ```bash
@@ -1017,10 +1020,9 @@ estado entre tests.
 | Frontend `/login`, guards y refresh silencioso | ✅ |
 | Frontend del catálogo (búsqueda, filtros y ficha de destino) | ✅ Fase 2.4 |
 | Frontend de intake, plan, dashboard y equipo | ✅ Fases 3.3–3.4, 4.5–4.6, 5.3 y 6.4 |
+| Imágenes de los 7 destinos (WebP local + seed a Storage) | ✅ `frontend/public/images/destinations/` y `backend/prisma/assets/catalog/destinations/` |
 | Disponibilidad de catálogo (modelo + explorador) | ⏳ Fase 2.5 |
-| Frontend del intake (landing + chat) | ⏳ Fases 3.3–3.4 |
-| Frontend del workspace (mapa, carrusel, timeline, progreso) | ⏳ Fases 4.5–4.6 y 5.3 |
-| Frontend del dashboard (filtros, reapertura, publicación) | ⏳ Fase 6.4 |
+| Mapa Leaflet embebido | ⏳ Fase 4.5 |
 | Clima por día (HU 2.6) y chat de refinamiento (HU 1.3) | ⏳ proveedor/decisión pendiente |
 | Pruebas de carga de `/generate` y `/plans` | ⏳ Fase 7.3 |
 

@@ -506,6 +506,7 @@ accede a sus planes y un `ADMIN` a todos. Un plan ajeno responde `404`.
     "id": "...",
     "city": "Cartagena",
     "country": "Colombia",
+    "slug": "cartagena",
     "latitude": 10.391049,
     "longitude": -75.479426,
     "timezone": "America/Bogota",

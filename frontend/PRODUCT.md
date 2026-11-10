@@ -53,7 +53,7 @@ The AI never invents prices or final names. It proposes a structure anchored to 
 - Seeded Supabase catalog: 7 Colombian destinations (Cartagena, Eje Cafetero, Medellín, San Andrés, Santa Marta, Bogotá, Guatapé), 14 hotels, 28 activities, 15 transport options.
 - Real backend contract in `docs/API.md` and `docs/BACKEND.md`.
 - Real admin credentials live in `backend/.env`; never expose them in UI copy, docs or the client bundle.
-- Destination images are seeded placeholders (`picsum.photos`) until real photography is added. Do not present them as owned photography.
+- The 7 destination photos are local WebP files in `frontend/public/images/destinations/` and are reused for hotels/activities/transport when those items do not have a specific asset. They are reference photography, not owned photography.
 - The PDF is generated from persisted plans; no client-side price calculation is allowed.
 
 ## Product Principles

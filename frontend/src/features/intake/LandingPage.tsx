@@ -10,6 +10,7 @@ import { Icon } from '../../shared/components/Icon';
 import { Logo } from '../../shared/components/Logo';
 import { toast } from '../../shared/components/Toast';
 import { formatMoneyShort, titleCase } from '../../shared/lib/format';
+import { destinationImage } from '../../shared/lib/images';
 
 const promptExamples = [
   'Cinco días en Cartagena para dos, con playa y gastronomía.',
@@ -38,64 +39,68 @@ const steps = [
   },
 ];
 
-const DestinationCard: React.FC<{ destination: DestinationDto }> = ({ destination }) => (
-  <Link
-    to={`/catalog/${destination.id}`}
-    className="group flex h-full flex-col overflow-hidden rounded-[24px] border border-divider bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_44px_-24px_rgba(16,38,42,0.35)] focus-visible:outline-3 focus-visible:outline-orange focus-visible:outline-offset-3"
-  >
-    <div className="relative h-44 overflow-hidden bg-mint">
-      {destination.heroImageUrl ? (
-        <img
-          src={destination.heroImageUrl}
-          alt={`Imagen de referencia de ${destination.city}`}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-        />
-      ) : (
-        <div className="grid h-full w-full place-items-center bg-[linear-gradient(135deg,#CFEAE3,#9ADBCB)] text-forest/40">
-          <Icon name="mountain" size={54} strokeWidth={1.4} />
-        </div>
-      )}
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,38,42,0.02)_30%,rgba(16,38,42,0.78))]" />
-      {destination.isFeatured ? (
-        <span className="absolute left-4 top-4 rounded-full bg-gold px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-forest">
-          Destacado
-        </span>
-      ) : null}
-      <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-        <p className="font-heading text-[22px] font-extrabold leading-tight">{destination.city}</p>
-        <p className="text-xs font-medium text-white/75">{destination.country}</p>
-      </div>
-    </div>
+const DestinationCard: React.FC<{ destination: DestinationDto }> = ({ destination }) => {
+  const image = destinationImage(destination.slug, destination.heroImageUrl);
 
-    <div className="flex flex-1 flex-col p-5">
-      <p className="line-clamp-2 text-sm leading-relaxed text-muted">
-        {destination.description ?? 'Un destino del catálogo Trazo.'}
-      </p>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {destination.tags.slice(0, 3).map((tag) => (
-          <span
-            key={tag}
-            className="rounded-full bg-mint-light px-2.5 py-1 text-[11px] font-medium text-forest"
-          >
-            {titleCase(tag)}
+  return (
+    <Link
+      to={`/catalog/${destination.id}`}
+      className="group flex h-full flex-col overflow-hidden rounded-[24px] border border-divider bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_44px_-24px_rgba(16,38,42,0.35)] focus-visible:outline-3 focus-visible:outline-orange focus-visible:outline-offset-3"
+    >
+      <div className="relative h-44 overflow-hidden bg-mint">
+        {image ? (
+          <img
+            src={image}
+            alt={`Imagen de ${destination.city}`}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center bg-[linear-gradient(135deg,#CFEAE3,#9ADBCB)] text-forest/40">
+            <Icon name="mountain" size={54} strokeWidth={1.4} />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(16,38,42,0.02)_30%,rgba(16,38,42,0.78))]" />
+        {destination.isFeatured ? (
+          <span className="absolute left-4 top-4 rounded-full bg-gold px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-forest">
+            Destacado
           </span>
-        ))}
+        ) : null}
+        <div className="absolute inset-x-0 bottom-0 p-4 text-white">
+          <p className="font-heading text-[22px] font-extrabold leading-tight">{destination.city}</p>
+          <p className="text-xs font-medium text-white/75">{destination.country}</p>
+        </div>
       </div>
-      <div className="mt-auto flex items-center justify-between gap-2 pt-4">
-        <span className="text-xs text-muted">
-          Desde{' '}
-          <span className="text-sm font-bold text-forest">
-            {destination.fromPrice ? formatMoneyShort(destination.fromPrice) : 'por definir'}
+
+      <div className="flex flex-1 flex-col p-5">
+        <p className="line-clamp-2 text-sm leading-relaxed text-muted">
+          {destination.description ?? 'Un destino del catálogo Trazo.'}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {destination.tags.slice(0, 3).map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full bg-mint-light px-2.5 py-1 text-[11px] font-medium text-forest"
+            >
+              {titleCase(tag)}
+            </span>
+          ))}
+        </div>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-4">
+          <span className="text-xs text-muted">
+            Desde{' '}
+            <span className="text-sm font-bold text-forest">
+              {destination.fromPrice ? formatMoneyShort(destination.fromPrice) : 'por definir'}
+            </span>
           </span>
-        </span>
-        <span className="inline-flex items-center gap-1 text-xs font-bold text-forest transition-transform group-hover:translate-x-0.5">
-          Explorar <Icon name="arrowRight" size={14} />
-        </span>
+          <span className="inline-flex items-center gap-1 text-xs font-bold text-forest transition-transform group-hover:translate-x-0.5">
+            Explorar <Icon name="arrowRight" size={14} />
+          </span>
+        </div>
       </div>
-    </div>
-  </Link>
-);
+    </Link>
+  );
+};
 
 const DestinationSkeleton: React.FC = () => (
   <div className="overflow-hidden rounded-[24px] border border-divider bg-white">
@@ -175,6 +180,10 @@ export const LandingPage: React.FC = () => {
   const destinations = destinationsQuery.data?.items ?? [];
   const hero = destinations[0];
   const secondary = destinations[1];
+  const heroImage = hero ? destinationImage(hero.slug, hero.heroImageUrl) : null;
+  const secondaryImage = secondary
+    ? destinationImage(secondary.slug, secondary.heroImageUrl)
+    : null;
 
   return (
     <div className="overflow-x-hidden">
@@ -257,10 +266,10 @@ export const LandingPage: React.FC = () => {
             />
             <div className="relative rotate-[-2deg] rounded-[30px] border border-white/80 bg-white p-3 shadow-[0_30px_60px_-30px_rgba(16,38,42,0.45)] transition-transform duration-500 hover:rotate-0">
               <div className="relative h-[300px] overflow-hidden rounded-[22px] bg-mint sm:h-[340px]">
-                {hero?.heroImageUrl ? (
+                {heroImage ? (
                   <img
-                    src={hero.heroImageUrl}
-                    alt={`Imagen de referencia de ${hero.city}`}
+                    src={heroImage}
+                    alt={`Imagen de ${hero?.city ?? 'destino'}`}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -289,10 +298,10 @@ export const LandingPage: React.FC = () => {
             {/* Small second postcard */}
             <div className="absolute -bottom-8 -left-3 hidden w-[220px] rotate-[3deg] overflow-hidden rounded-[22px] border border-white bg-sand p-2 shadow-[0_20px_40px_-22px_rgba(16,38,42,0.5)] sm:block">
               <div className="relative h-[92px] overflow-hidden rounded-[16px] bg-mint">
-                {secondary?.heroImageUrl ? (
+                {secondaryImage ? (
                   <img
-                    src={secondary.heroImageUrl}
-                    alt={`Imagen de referencia de ${secondary.city}`}
+                    src={secondaryImage}
+                    alt={`Imagen de ${secondary?.city ?? 'destino'}`}
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -681,7 +690,7 @@ export const LandingPage: React.FC = () => {
             <span className="text-xs text-muted">Estudio de viajes · Medellín, Colombia</span>
           </div>
           <p className="text-xs text-muted">
-            Imágenes de referencia del catálogo · Proyecto académico 2026
+            Fotografías de referencia de los destinos · Proyecto académico 2026
           </p>
         </div>
       </footer>

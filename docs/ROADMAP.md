@@ -26,12 +26,12 @@ migraciones y el seed (7 destinos) ya están aplicados en Supabase.
 |---|---|---|
 | 0.1 | Monorepo npm workspaces, `backend/`, `packages/shared/`, TS strict, ESLint flat, Prettier, Vitest. `frontend/` queda para su fase | ✅ |
 | 0.2 | `config/env.ts` con Zod, `config/container.ts`, logger pino con redacción, `errorHandler` problem+json, `/health` y `/health/ready` | ✅ |
-| 0.3 | `prisma/schema.prisma` con todo el dominio, migración `0001_init` con CHECK constraints, seed de admin | ✅ código; ⏳ aplicar migración/seed con credenciales reales |
+| 0.3 | `prisma/schema.prisma` con todo el dominio, migración `0001_init` con CHECK constraints, seed de admin | ✅ aplicado en Supabase |
 | 0.4 | Script `verify` (`lint → typecheck → test → build`) | ✅ |
 
 **DoD:** `npm run dev -w backend` levanta, `/health/ready` responde, la migración aplica en Supabase,
-`packages/shared` se importa desde ambos workspaces. El código y los tests están listos; la migración
-y el seed se ejecutan cuando el equipo configure `DATABASE_URL`/`DIRECT_URL`.
+`packages/shared` se importa desde ambos workspaces. La migración y el seed ya se ejecutaron en
+Supabase.
 
 ## Fase 1 — Identidad y acceso
 
@@ -58,7 +58,7 @@ autenticación.
 
 **DoD:** precios y monedas consistentes; índices creados; `GET` paginado y filtrable; sin escritura
 para `ADVISOR`. Backend cumplido (47 tests de catálogo + 6 de shared, migración `0002_catalog_search`
-aplicada y seed ejecutado); faltan 2.4 y 2.5.
+aplicada y seed ejecutado); 2.4 está implementado y falta 2.5.
 
 ## Fase 3 — Intake conversacional (sin IA generativa)
 
@@ -71,8 +71,8 @@ aplicada y seed ejecutado); faltan 2.4 y 2.5.
 
 **DoD:** un prompt incompleto nunca falla; máx. 2 preguntas por turno; `missingFields` correcto;
 tests de extracción con ≥ 10 prompts reales. Backend cumplido: 3.1–3.2 implementados, migración
-`0003_trip_request_adults_nullable`; la suite completa suma 130 tests de backend. Faltan las
-rebanadas de frontend 3.3–3.4.
+`0003_trip_request_adults_nullable`; 3.3–3.4 están implementados en el frontend. La suite completa
+suma 131 tests de backend.
 
 ## Fase 4 — Generación con IA anclada al catálogo
 

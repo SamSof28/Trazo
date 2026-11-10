@@ -20,6 +20,7 @@ import {
   titleCase,
   transportModeLabel,
 } from '../../shared/lib/format';
+import { catalogItemImage, destinationImage } from '../../shared/lib/images';
 
 type Tab = 'hotels' | 'activities' | 'transport';
 
@@ -37,18 +38,22 @@ const intensityClasses: Record<ActivityDto['intensity'], string> = {
   HIGH: 'bg-orange/15 text-orange-dark',
 };
 
-const HotelCard: React.FC<{ hotel: HotelDto }> = ({ hotel }) => {
+const HotelCard: React.FC<{ hotel: HotelDto; destinationSlug: string }> = ({
+  hotel,
+  destinationSlug,
+}) => {
   const amenities = Object.entries(hotel.amenities ?? {})
     .filter(([, value]) => value === true || typeof value === 'string')
     .slice(0, 3)
     .map(([key]) => titleCase(key));
+  const image = catalogItemImage(hotel.imageUrl, destinationSlug);
 
   return (
     <article className="flex flex-col overflow-hidden rounded-[22px] border border-divider bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_36px_-24px_rgba(16,38,42,0.3)]">
       <div className="relative h-40 overflow-hidden bg-mint">
-        {hotel.imageUrl ? (
+        {image ? (
           <img
-            src={hotel.imageUrl}
+            src={image}
             alt={`Imagen de referencia de ${hotel.name}`}
             loading="lazy"
             className="h-full w-full object-cover"
@@ -95,50 +100,61 @@ const HotelCard: React.FC<{ hotel: HotelDto }> = ({ hotel }) => {
   );
 };
 
-const ActivityCard: React.FC<{ activity: ActivityDto }> = ({ activity }) => (
-  <article className="flex flex-col overflow-hidden rounded-[22px] border border-divider bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_36px_-24px_rgba(16,38,42,0.3)]">
-    <div className="relative h-40 overflow-hidden bg-mint">
-      {activity.imageUrl ? (
-        <img
-          src={activity.imageUrl}
-          alt={`Imagen de referencia de ${activity.name}`}
-          loading="lazy"
-          className="h-full w-full object-cover"
-        />
-      ) : (
-        <div className="grid h-full w-full place-items-center bg-[linear-gradient(135deg,#CFEAE3,#9ADBCB)] text-forest/30">
-          <Icon name="activity" size={46} strokeWidth={1.4} />
+const ActivityCard: React.FC<{ activity: ActivityDto; destinationSlug: string }> = ({
+  activity,
+  destinationSlug,
+}) => {
+  const image = catalogItemImage(activity.imageUrl, destinationSlug);
+
+  return (
+    <article className="flex flex-col overflow-hidden rounded-[22px] border border-divider bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_36px_-24px_rgba(16,38,42,0.3)]">
+      <div className="relative h-40 overflow-hidden bg-mint">
+        {image ? (
+          <img
+            src={image}
+            alt={`Imagen de referencia de ${activity.name}`}
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center bg-[linear-gradient(135deg,#CFEAE3,#9ADBCB)] text-forest/30">
+            <Icon name="activity" size={46} strokeWidth={1.4} />
+          </div>
+        )}
+        <span
+          className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-bold ${intensityClasses[activity.intensity]}`}
+        >
+          {intensityLabel(activity.intensity)}
+        </span>
+      </div>
+      <div className="flex flex-1 flex-col p-5">
+        <h3 className="font-heading text-lg font-extrabold leading-tight">{activity.name}</h3>
+        <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted">
+          <Icon name="clock" size={13} /> {durationLabel(activity.durationMinutes)}
+        </p>
+        <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted">{activity.description}</p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {activity.tags.slice(0, 3).map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full bg-mint-light px-2.5 py-1 text-[11px] font-medium text-forest"
+            >
+              {titleCase(tag)}
+            </span>
+          ))}
         </div>
-      )}
-      <span
-        className={`absolute left-3 top-3 rounded-full px-2.5 py-1 text-[11px] font-bold ${intensityClasses[activity.intensity]}`}
-      >
-        {intensityLabel(activity.intensity)}
-      </span>
-    </div>
-    <div className="flex flex-1 flex-col p-5">
-      <h3 className="font-heading text-lg font-extrabold leading-tight">{activity.name}</h3>
-      <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted">
-        <Icon name="clock" size={13} /> {durationLabel(activity.durationMinutes)}
-      </p>
-      <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted">{activity.description}</p>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {activity.tags.slice(0, 3).map((tag) => (
-          <span
-            key={tag}
-            className="rounded-full bg-mint-light px-2.5 py-1 text-[11px] font-medium text-forest"
-          >
-            {titleCase(tag)}
-          </span>
-        ))}
+        <div className="mt-auto pt-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+            Por persona
+          </p>
+          <p className="font-heading text-xl font-extrabold">
+            {formatMoney(activity.pricePerPerson)}
+          </p>
+        </div>
       </div>
-      <div className="mt-auto pt-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted">Por persona</p>
-        <p className="font-heading text-xl font-extrabold">{formatMoney(activity.pricePerPerson)}</p>
-      </div>
-    </div>
-  </article>
-);
+    </article>
+  );
+};
 
 const TransportCard: React.FC<{ option: TransportOptionDto; originName: string | null }> = ({
   option,
@@ -257,6 +273,8 @@ export const CatalogDestinationPage: React.FC = () => {
     );
   }
 
+  const heroImage = destinationImage(destination.slug, destination.heroImageUrl);
+
   const tabs: Array<{ id: Tab; label: string; count: number; icon: IconName }> = [
     { id: 'hotels', label: 'Hoteles', count: hotels.length, icon: 'hotel' },
     { id: 'activities', label: 'Actividades', count: activities.length, icon: 'activity' },
@@ -278,10 +296,10 @@ export const CatalogDestinationPage: React.FC = () => {
       {/* Destination hero */}
       <section className="relative mt-4 overflow-hidden rounded-[30px] bg-forest text-white shadow-[0_26px_50px_-30px_rgba(16,38,42,0.55)]">
         <div className="relative min-h-[340px]">
-          {destination.heroImageUrl ? (
+          {heroImage ? (
             <img
-              src={destination.heroImageUrl}
-              alt={`Imagen de referencia de ${destination.city}`}
+              src={heroImage}
+              alt={`Imagen de ${destination.city}`}
               className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
@@ -402,7 +420,7 @@ export const CatalogDestinationPage: React.FC = () => {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {hotels.map((hotel) => (
-                <HotelCard key={hotel.id} hotel={hotel} />
+                <HotelCard key={hotel.id} hotel={hotel} destinationSlug={destination.slug} />
               ))}
             </div>
           )
@@ -414,7 +432,11 @@ export const CatalogDestinationPage: React.FC = () => {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {activities.map((activity) => (
-                <ActivityCard key={activity.id} activity={activity} />
+                <ActivityCard
+                  key={activity.id}
+                  activity={activity}
+                  destinationSlug={destination.slug}
+                />
               ))}
             </div>
           )
@@ -440,8 +462,8 @@ export const CatalogDestinationPage: React.FC = () => {
       </div>
 
       <p className="mt-8 text-xs text-muted">
-        Precios en {destination.fromPrice?.currency ?? 'COP'} tomados del catálogo. Las imágenes son
-        referencias y se reemplazarán por fotografía propia.
+        Precios en {destination.fromPrice?.currency ?? 'COP'} tomados del catálogo. Fotografías de
+        referencia de {destination.city}.
       </p>
     </div>
   );

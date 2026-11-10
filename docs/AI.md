@@ -3,7 +3,8 @@
 > **Estado:** Fase 4 implementada. El adaptador Gemini (REST), el adaptador `mock` determinista, el
 > validador Zod, el shortlist, el job asíncrono y el runner in-process ya existen y están cubiertos por
 > tests. La app funciona sin red con `AI_PROVIDER=mock`; Gemini solo se usa cuando se configura
-> explícitamente. El frontend del workspace y la disponibilidad de catálogo siguen pendientes.
+> explícitamente. El frontend del workspace está implementado; la disponibilidad de catálogo, el clima
+> y el chat de refinamiento siguen pendientes.
 
 Este documento define cómo se conecta el modelo, qué información recibe y qué se le prohíbe. Es el
 contrato de `AiPlannerPort`: la IA elige ítems del catálogo, pero **nunca** produce precios, nombres
