@@ -72,7 +72,8 @@ npm run db:seed -w backend
 
 - **Implementado:** scaffold del monorepo, `config/env.ts` con Zod, logger pino con redacción,
   `errorHandler` problem+json, `/health`, `/health/ready`, Prisma schema completo + migraciones
-  `0001_init`–`0005_transport_image` **aplicadas en Supabase** (`0006_user_agency` pendiente), seed
+  `0001_init`–`0006_user_agency` **aplicadas en Supabase** (0006 verificada en producción el
+  2026-11-09), seed
   de admin y catálogo de Colombia, login, **registro público (`POST /auth/register`, siempre
   `ADVISOR`)**, refresh rotativo con detección de reuso, logout, `/auth/me`, RBAC, `GET/POST /users`
   (solo `ADMIN`), catálogo completo (`destinations`, `hotels`, `activities`, `transport`) con lectura
@@ -82,7 +83,7 @@ npm run db:seed -w backend
   metadatos e ítems, alternativas, presupuesto), ciclo de vida (`SAVED`, publicar, archivar, duplicar),
   dashboard API y reportes JSON/CSV + PDF. Incluye el puerto `ObjectStorage` y el adaptador REST
   `SupabaseStorage` (bucket público `catalog`) usado por el seed.
-- **Tests:** 138 de backend + 6 de `packages/shared`, con fakes (sin DB ni red). `npm run verify` en
+- **Tests:** 140 de backend + 6 de `packages/shared`, con fakes (sin DB ni red). `npm run verify` en
   verde el 2026-11-09.
 - **Datos sembrados:** 1 admin, 7 destinos, 14 hoteles, 28 actividades y 15 transportes. Las 7 fotos
   de destinos ya están versionadas en `frontend/public/images/destinations/` y
@@ -100,9 +101,11 @@ npm run db:seed -w backend
   administración del equipo. El login se probó contra la API local y el refresh funciona tras
   corregir el orden de la FK en `PrismaRefreshTokenRepository.rotate` (test en
   `refresh-token.repository.test.ts`).
-- **Pendiente inmediato:** aplicar `0006_user_agency` en Supabase; modelo de disponibilidad (2.5),
-  clima (5.7), chat de refinamiento (5.8), mapa Leaflet embebido y pruebas de carga (7.3); despliegue
-  cuando el compañero lo indique. **No** hacer commit/push sin autorización.
+- **Pendiente inmediato:** `0006_user_agency` ya está aplicada y verificada en producción (registro,
+  login y refresh funcionan). Producción: SPA `https://trazoai.vercel.app`, API
+  `https://trazo-api-guxc.onrender.com` (`https://trazo.vercel.app` es otra app). Siguen: modelo de
+  disponibilidad (2.5), clima (5.7), chat de refinamiento (5.8), mapa Leaflet embebido y pruebas de
+  carga (7.3); despliegue cuando el compañero lo indique. **No** hacer commit/push sin autorización.
 - **Contrato de conexión:** [`docs/BACKEND.md`](docs/BACKEND.md). **IA:** [`docs/AI.md`](docs/AI.md).
   **Despliegue:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). **SQL consolidado:**
   [`docs/supabase-schema.sql`](docs/supabase-schema.sql).

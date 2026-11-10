@@ -73,7 +73,7 @@ aplicada y seed ejecutado); 2.4 está implementado y falta 2.5.
 **DoD:** un prompt incompleto nunca falla; máx. 2 preguntas por turno; `missingFields` correcto;
 tests de extracción con ≥ 10 prompts reales. Backend cumplido: 3.1–3.2 implementados, migración
 `0003_trip_request_adults_nullable`; 3.3–3.4 están implementados en el frontend. La suite completa
-suma 138 tests de backend.
+suma 140 tests de backend.
 
 ## Fase 4 — Generación con IA anclada al catálogo
 

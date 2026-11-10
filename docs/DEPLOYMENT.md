@@ -3,14 +3,16 @@
 Guía para llevar Trazo de local a producción. Cubre la base de datos en Supabase, las migraciones,
 el seed, el hosting del backend y el despliegue del SPA en Vercel.
 
-> **Estado (2026-11-09):** las migraciones `0001`–`0005` ya están aplicadas en Supabase y el seed
-> está cargado (1 admin, 7 destinos, 14 hoteles, 28 actividades y 15 transportes). **Antes de exponer
-> el registro público hay que aplicar `0006_user_agency`** (`npm run db:deploy -w backend`). El backend
-> está listo para que el frontend consuma la API. Las imágenes de los 7 destinos ya están versionadas
-> como WebP local y se muestran desde `frontend/public/images/destinations/`; al correr el seed con
-> Storage se suben al bucket `catalog`. El `frontend/` implementa login, registro público, guards,
-> cliente API con refresh, landing, catálogo, intake, workspace del plan, dashboard y administración
-> del equipo.
+> **Estado (2026-11-09, America/Bogota):** las migraciones `0001`–`0006_user_agency` están aplicadas
+> en Supabase y el seed está cargado (1 admin, 7 destinos, 14 hoteles, 28 actividades y 15
+> transportes). El registro, login y refresh se verificaron contra la API desplegada. Nota histórica:
+> un backend que consulte `users.agency` sin la migración 0006 devuelve `500 INTERNAL_ERROR`
+> (`P2022`), aunque `/health/ready` responda `200`. El frontend desplegado en
+> `https://trazoai.vercel.app` corresponde al build actual. Las imágenes de los 7 destinos ya están
+> versionadas como WebP local y se muestran desde `frontend/public/images/destinations/`; al correr
+> el seed con Storage se suben al bucket `catalog`. El `frontend/` implementa login, registro público,
+> guards, cliente API con refresh, landing, catálogo, intake, workspace del plan, dashboard y
+> administración del equipo.
 
 ---
 
@@ -27,11 +29,15 @@ cookie `HttpOnly; SameSite=Strict` del refresh funciona y no hace falta CORS cro
 
 ```text
 Navegador
-  └─ https://trazo.vercel.app
+  └─ https://trazoai.vercel.app
        ├─ /              → SPA estático (Vercel)
-       └─ /api/v1/*      → rewrite a https://trazo-api.onrender.com/api/v1/*
+       └─ /api/v1/*      → rewrite a https://trazo-api-guxc.onrender.com/api/v1/*
                               └─ Supabase Postgres (pooler :6543)
 ```
+
+> `https://trazo.vercel.app` **no** es este proyecto: sirve otra aplicación Next.js. El SPA de Trazo
+> está en `https://trazoai.vercel.app` y la API en `https://trazo-api-guxc.onrender.com`. Usa estas
+> URLs exactas en `CORS_ORIGINS` y en el rewrite de `vercel.json`.
 
 ### 1.1 ¿Por qué no todo en Vercel?
 
@@ -54,16 +60,19 @@ el SPA.
 
 ### 1.2 Orden de despliegue
 
-1. **Supabase** (casi listo): `0001`–`0005` aplicadas y seed cargado. Ejecuta
-   `npm run db:deploy -w backend` para aplicar `0006_user_agency` antes de probar el registro. Para
-   una base nueva, `npm run db:deploy -w backend` y `npm run db:seed -w backend`.
+1. **Supabase:** `0006_user_agency` ya está aplicada y verificada. Para una base nueva, ejecuta
+   `npm run db:deploy -w backend` con el `DIRECT_URL` de producción y luego
+   `npm run db:seed -w backend`. Si una migración queda pendiente, `/auth/login` y `/auth/register`
+   devuelven `500 INTERNAL_ERROR` (Prisma `P2022`), aunque `/health/ready` responda `200` porque solo
+   ejecuta `SELECT 1`.
 2. **Backend** en Render/Railway/Fly: variables de entorno, build con Prisma generate, health check
    `/health`. Anota la URL pública (`https://<api>.onrender.com`).
 3. **Frontend** en Vercel: build de `@trazo/shared` + `frontend`, output `frontend/dist`, `vercel.json`
    con el rewrite `/api/:path*` hacia la URL del backend y fallback a `/index.html`.
 4. **Probar el circuito completo** desde la URL de Vercel: login, recarga (refresh), `/health/ready`,
    generación y descarga de PDF/CSV.
-5. Recién entonces compartir la URL con el equipo. No hace falta correr migraciones en cada deploy.
+5. Recién entonces compartir la URL con el equipo. No hace falta correr migraciones en cada deploy,
+   pero sí verificar `prisma migrate status` antes de desplegar código que dependa de una nueva.
 
 ---
 
@@ -225,7 +234,8 @@ en Render. El start ejecuta `node dist/server.js`.
 ```dotenv
 NODE_ENV=production
 # PORT lo inyecta el host; no lo fijes en Render/Railway.
-CORS_ORIGINS=https://trazo.vercel.app
+# Origen exacto del SPA (varios orígenes separados por coma si hay dominio propio).
+CORS_ORIGINS=https://trazoai.vercel.app
 TRUST_PROXY=true
 
 DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-1-us-west-2.pooler.supabase.com:6543/postgres?pgbouncer=true
@@ -251,6 +261,11 @@ RATE_LIMIT_ENABLED=true
 
 Notas:
 
+- `CORS_ORIGINS` debe llevar el origen exacto del SPA: `https://trazoai.vercel.app`, **sin slash
+  final**. El backend normaliza el slash desde el cambio en `cors-origins.ts`, pero es mejor guardarlo
+  limpio. `https://trazo.vercel.app` es otra aplicación y no debe usarse en la allowlist. Aunque el
+  rewrite evita CORS en el navegador, el backend recibe `Origin` y una allowlist incorrecta rompe
+  cualquier llamada directa a la API.
 - `TRUST_PROXY=true` solo si el host está detrás de su proxy (Render/Railway lo están). Sin esto, el
   rate limit ve la IP del proxy.
 - `COOKIE_DOMAIN` se deja vacío cuando el SPA proxya `/api`: la cookie queda host-only del dominio de
@@ -267,6 +282,21 @@ Notas:
 No ejecutes `db:deploy` en cada arranque ni en cada request: puede haber condiciones de carrera entre
 instancias. Aplícalas una vez desde local/CI antes de desplegar la versión que las necesita. Si el
 proveedor ofrece *release command*, úsalo de forma controlada y con una sola instancia.
+
+Antes de desplegar, verifica que no haya migraciones pendientes:
+
+```bash
+npm exec -w backend -- prisma migrate status
+```
+
+Debe terminar con `Database schema is up to date!`. Si hay pendientes, aplícalas con
+`npm run db:deploy -w backend`. Un backend nuevo con una migración pendiente puede arrancar y
+responder `/health/ready` mientras `/auth/*` falla con `P2022`: el health check solo hace `SELECT 1`,
+no valida el esquema.
+
+En Render, si el plan permite **Pre-Deploy Command**, configura
+`npm run db:deploy -w backend` para que la migración corra antes de arrancar la nueva versión. Debe
+haber una sola instancia durante el deploy; si no, usa un job de release manual.
 
 ### 4.4 Logs y salud
 
@@ -305,7 +335,7 @@ El SPA debe llamar a `/api/v1/*` en el mismo origen. En el `vercel.json` de la r
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://trazo-api.onrender.com/api/:path*"
+      "destination": "https://trazo-api-guxc.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
@@ -328,11 +358,11 @@ Con esto:
 
 **No definas `VITE_API_URL` en Vercel si usas el rewrite.** El cliente usa rutas relativas en el build
 de producción (`/api/v1/...`) y `http://localhost:3000` solo en `vite dev`. Si algún día llamas directo
-a la API, define `VITE_API_URL=https://trazo-api.onrender.com` (sin `/api/v1`, el cliente lo agrega).
-
-Si en lugar de rewrite llamas directo a la API en otro dominio, el refresh **no funcionará** con
-`SameSite=Strict`: el navegador no envía la cookie en peticiones cross-site. No cambies la cookie a
-`SameSite=None` sin revisar CSRF y sin volver a probar el flujo completo.
+a la API, define `VITE_API_URL=https://trazo-api-guxc.onrender.com` (sin `/api/v1`, el cliente lo
+agrega) y añade `https://trazoai.vercel.app` a `CORS_ORIGINS`. Ten en cuenta que el refresh **no
+funcionará** con `SameSite=Strict` entre dominios distintos: el navegador no envía la cookie en
+peticiones cross-site. No cambies la cookie a `SameSite=None` sin revisar CSRF y sin volver a probar
+el flujo completo; por eso el rewrite sigue siendo la opción recomendada.
 
 ### 5.3 Variables y secretos
 
@@ -343,8 +373,10 @@ Si en lugar de rewrite llamas directo a la API en otro dominio, el refresh **no 
 
 ### 5.4 Dominios
 
-- Añade el dominio de Vercel a `CORS_ORIGINS` del backend (aunque uses rewrite, el navegador envía
-  `Origin` en POST/PATCH).
+- Añade el dominio exacto del SPA a `CORS_ORIGINS` del backend:
+  `https://trazoai.vercel.app`. Aunque uses rewrite, el backend recibe `Origin` en POST/PATCH y la
+  allowlist debe ser correcta para llamadas directas.
+- `https://trazo.vercel.app` es otra aplicación (Next.js), no este SPA. No la uses.
 - Si usas dominio propio, actualiza `CORS_ORIGINS` y el `destination` del rewrite.
 - Mantén HTTPS en ambos lados.
 
@@ -376,7 +408,7 @@ Detalle del prompt, grounding y reparación: [`AI.md`](AI.md).
 
 - [ ] `NODE_ENV=production` y HTTPS en SPA y API.
 - [ ] `JWT_ACCESS_SECRET` aleatorio de ≥ 32 bytes; distinto del de desarrollo.
-- [ ] `CORS_ORIGINS` con la URL exacta del SPA, sin comodines.
+- [ ] `CORS_ORIGINS` con `https://trazoai.vercel.app`, sin comodines.
 - [ ] `RATE_LIMIT_ENABLED=true`; límites de `/auth/*` y `/generate` activos.
 - [ ] `DATABASE_URL` por el pooler y `DIRECT_URL` solo para migraciones.
 - [ ] `.env` fuera de git; secretos en el gestor del host.
@@ -404,7 +436,12 @@ sus dependencias ya aceptan las versiones corregidas, se pueden retirar.
 
 ## 8. Smoke test de producción
 
-Sustituye `$API` por la URL pública (o por `https://trazo.vercel.app/api/v1` si usas el rewrite).
+Sustituye `$API` por la URL pública. En producción con rewrite:
+`https://trazoai.vercel.app/api/v1`; contra Render directamente:
+`https://trazo-api-guxc.onrender.com/api/v1`.
+
+> Si `/auth/register` o `/auth/login` devuelven `500 INTERNAL_ERROR`, revisa primero
+> `prisma migrate status`: es el síntoma de `0006_user_agency` pendiente (`P2022`).
 
 ```bash
 # 1. Salud
@@ -482,7 +519,8 @@ Si el job queda `FAILED`, revisa `errorCode`:
 | `429` en `/generate` | Límite de 10/h/usuario; espera o ajusta el límite con criterio |
 | Generación atascada en `GENERATING` | Host serverless o proceso reiniciado; revisa `ai_jobs` |
 | PDF/CSV vacío | Falta el header `Authorization`; el endpoint no es público |
-| CORS bloqueado | `CORS_ORIGINS` no incluye el origen exacto del SPA |
+| `500 INTERNAL_ERROR` en `/auth/login` y `/auth/register` | Migración pendiente: Prisma consulta `users.agency` y la columna no existe (`P2022`). Ejecuta `npm run db:deploy -w backend`; `/health/ready` puede seguir en `200` porque solo hace `SELECT 1` |
+| CORS bloqueado | `CORS_ORIGINS` no incluye el origen exacto del SPA (`https://trazoai.vercel.app`) |
 
 ---
 

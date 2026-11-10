@@ -1,6 +1,6 @@
 -- Trazo · esquema completo para Supabase/PostgreSQL
 -- Generado desde backend/prisma/migrations (0001–0006).
--- Proyecto aplicado: dewtkwfoziiqkeijbipg (bucket Storage: catalog; 0006 pendiente).
+-- Proyecto aplicado: dewtkwfoziiqkeijbipg (bucket Storage: catalog; 0006 aplicada).
 -- Fecha: 2026-11-03.
 --
 -- Uso recomendado en el backend:

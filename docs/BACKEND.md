@@ -1038,7 +1038,7 @@ estado entre tests.
 |---|---|
 | Scaffold, env, logger, errores, health | ✅ |
 | Prisma schema + migraciones `0001_init`–`0005_transport_image` | ✅ (aplicadas en Supabase) |
-| Migración `0006_user_agency` | ⏳ pendiente de aplicar en Supabase |
+| Migración `0006_user_agency` | ✅ aplicada en Supabase (verificada el 2026-11-09) |
 | Seed de admin + catálogo de Colombia | ✅ (ejecutado: 1 admin, 7 destinos, 14 hoteles, 28 actividades, 15 transportes) |
 | Registro público, login, refresh rotativo, logout, `/auth/me` | ✅ |
 | RBAC `ADMIN` + `GET/POST /users` | ✅ |
@@ -1059,7 +1059,8 @@ estado entre tests.
 
 Antes de conectar el frontend, confirma con el equipo:
 
-1. `CORS_ORIGINS` contiene el origen exacto del SPA (`http://localhost:5173` en desarrollo).
+1. `CORS_ORIGINS` contiene el origen exacto del SPA (`http://localhost:5173` en desarrollo,
+   `https://trazoai.vercel.app` en producción).
 2. `DATABASE_URL` y `DIRECT_URL` son las de Supabase (pooler y directa, respectivamente).
 3. La migración y el seed ya corrieron.
 4. El admin de prueba existe y puede hacer login.

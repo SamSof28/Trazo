@@ -2,6 +2,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config as loadDotenv } from 'dotenv';
 import { z } from 'zod';
+import { normalizeCorsOrigins } from './cors-origins.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 loadDotenv({ path: resolve(here, '../../.env') });
@@ -19,12 +20,7 @@ const envSchema = z
     CORS_ORIGINS: z
       .string()
       .default('http://localhost:5173')
-      .transform((value) =>
-        value
-          .split(',')
-          .map((origin) => origin.trim())
-          .filter(Boolean),
-      )
+      .transform(normalizeCorsOrigins)
       .pipe(z.array(z.string().url()).min(1)),
     TRUST_PROXY: booleanString('false'),
 
